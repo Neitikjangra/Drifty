@@ -1,5 +1,5 @@
 "use client";
-import { MSG } from "@/lib/nexconn/ids";
+import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
 import {
   CARD_TAG,
   clearLiveMetadata,
@@ -20,27 +20,51 @@ import {
 
 export interface ChatHostOptions {
   appKey: string;
-  token: string;
   container: HTMLElement;
-  groupChannelId: string;
-  profiles: { userId: string; name: string }[];
-  groupName: string;
+  /** Room to open first. */
+  initialChannelId: string;
   cardActions: CardActions;
 }
 
 export interface ChatHostHandle {
+  /** Switch the open room (e.g. client ↔ internal tab). */
+  open(channelId: string): Promise<void>;
   destroy(): Promise<void>;
 }
 
 let active: Promise<ChatHostHandle> | null = null;
+let users = 0;
+let pendingTeardown: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Gets the shared chat instance (booting it on first use). Pair every call with
+ * releaseChat(). React dev mode mounts effects twice, so teardown is deferred and
+ * cancelled if someone re-acquires the chat straight away.
+ */
 export function startChat(opts: ChatHostOptions): Promise<ChatHostHandle> {
+  users++;
+  if (pendingTeardown) {
+    clearTimeout(pendingTeardown);
+    pendingTeardown = null;
+  }
   if (active) return active;
   active = boot(opts).catch((err) => {
     active = null;
     throw err;
   });
   return active;
+}
+
+export function releaseChat() {
+  users = Math.max(0, users - 1);
+  if (users > 0 || pendingTeardown) return;
+  pendingTeardown = setTimeout(() => {
+    pendingTeardown = null;
+    if (users > 0 || !active) return;
+    const current = active;
+    active = null;
+    void current.then((h) => h.destroy()).catch(() => {});
+  }, 300);
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -59,30 +83,80 @@ async function openWhenReady(open: () => Promise<{ isOk: boolean }>) {
   }
 }
 
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Request failed");
+  return data;
+}
+
+interface Directory {
+  users: { userId: string; name: string }[];
+  groups: { groupId: string; name: string; memberCount?: number }[];
+  members?: { userId: string; name: string }[];
+}
+
+/** Names for ChatUI, fetched from our server (which checks access) and cached. */
+function createDirectory() {
+  const users = new Map<string, string>();
+  const groups = new Map<string, { name: string; memberCount: number }>();
+  const valid = (ids: string[]) => ids.filter((id) => /^[A-Za-z0-9]{1,64}$/.test(id));
+  return {
+    // ChatUI rejects entries with an empty id, so only answer for real ids.
+    async users(all: string[]) {
+      const ids = valid(all);
+      const missing = ids.filter((id) => !users.has(id));
+      if (missing.length) {
+        const d = await postJson<Directory>("/api/chat/directory", { userIds: missing }).catch(() => null);
+        d?.users.forEach((u) => users.set(u.userId, u.name));
+      }
+      return ids.map((userId) => ({ userId, name: users.get(userId) ?? "Member" }));
+    },
+    async groups(all: string[]) {
+      const ids = valid(all);
+      const missing = ids.filter((id) => !groups.has(id));
+      if (missing.length) {
+        const d = await postJson<Directory>("/api/chat/directory", { groupIds: missing }).catch(() => null);
+        d?.groups.forEach((g) => groups.set(g.groupId, { name: g.name, memberCount: g.memberCount ?? 0 }));
+      }
+      return ids.map((groupId) => ({
+        groupId,
+        name: groups.get(groupId)?.name ?? "Room",
+        memberCount: groups.get(groupId)?.memberCount ?? 0,
+      }));
+    },
+    async members(groupId: string) {
+      const d = await postJson<Directory>("/api/chat/directory", { membersOf: groupId }).catch(() => null);
+      return (d?.members ?? []).map((m) => {
+        users.set(m.userId, m.name);
+        return { userId: m.userId, nickname: m.name };
+      });
+    },
+  };
+}
+
 async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
+  const { token } = await postJson<{ token: string }>("/api/nexconn/token");
   const chat = await import("@nexconn/chat");
   const { NCChatUIApplication } = await import("@nexconn/chatui");
   const { NCEngine, LogLevel, MessageHandler, GroupChannelIdentifier } = chat;
 
   NCEngine.initialize({
     appKey: opts.appKey,
-    // Debug during integration (skill rule); switch to WARN before production.
     logLevel: process.env.NODE_ENV === "production" ? LogLevel.WARN : LogLevel.DEBUG,
   });
 
-  const names = new Map(opts.profiles.map((p) => [p.userId, p.name]));
+  const dir = createDirectory();
   const app = NCChatUIApplication.initialize({
     language: "en_US",
     hooks: {
-      async reqUserProfiles(ids) {
-        return ids.map((userId) => ({ userId, name: names.get(userId) ?? "Member" }));
-      },
-      async reqGroupProfiles(ids) {
-        return ids.map((groupId) => ({ groupId, name: opts.groupName, memberCount: opts.profiles.length }));
-      },
-      async reqGroupMembers() {
-        return opts.profiles.map((p) => ({ userId: p.userId, nickname: p.name }));
-      },
+      reqUserProfiles: (ids) => dir.users(ids),
+      reqGroupProfiles: (ids) => dir.groups(ids),
+      reqGroupMembers: (groupId) => dir.members(groupId),
       async reqSystemProfiles(ids) {
         return ids.map((systemId) => ({ systemId, name: "Drifty" }));
       },
@@ -117,17 +191,23 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     }),
   );
 
-  const result = await NCEngine.connect({ token: opts.token });
-  if (!result.isOk) throw new Error(`Chat connection failed (code ${result.code})`);
+  const result = await NCEngine.connect({ token });
+  if (!result.isOk) throw new Error("We couldn't connect to the chat. Check your connection and try again.");
+  // ChatUI caches profiles in localStorage; make sure the bot always shows its real name.
+  app.updateUserProfile({ userId: BOT_USER_ID, name: BOT_NAME });
 
   const root = document.createElement("nc-chat-ui-app-provider");
   root.style.width = "100%";
   root.style.height = "100%";
   opts.container.replaceChildren(root);
+  const openRoom = (channelId: string) => app.openChannel(new GroupChannelIdentifier(channelId), false);
   // Don't block start-up on this; the user can always tap the room in the list.
-  void openWhenReady(() => app.openChannel(new GroupChannelIdentifier(opts.groupChannelId), false));
+  void openWhenReady(() => openRoom(opts.initialChannelId));
 
   return {
+    async open(channelId) {
+      await openRoom(channelId);
+    },
     async destroy() {
       NCEngine.removeMessageHandler("drifty-metadata");
       configureCardActions(null);
@@ -135,7 +215,6 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       opts.container.replaceChildren();
       app.destroy();
       await NCEngine.disconnect();
-      active = null;
     },
   };
 }

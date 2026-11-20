@@ -1,11 +1,14 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdminEnv, supabaseEnv } from "@/lib/env";
 
 /** Supabase client bound to the signed-in user's session cookies (RLS applies). */
 export async function supabaseServer() {
+  // Sessions are per request; tell Next not to prerender anything that reads them.
+  await connection();
   const env = supabaseEnv();
   const cookieStore = await cookies();
   return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {

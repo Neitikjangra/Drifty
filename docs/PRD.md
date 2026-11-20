@@ -215,7 +215,8 @@ profiles(user_id, display_name, email, nexconn_user_id unique)
 projects(workspace_id, client_name, approver_id, rounds_included int default 2,
          client_channel_id text, internal_channel_id text, archived bool default false)
 project_guests(project_id, user_id, role text check (role in ('approver','reviewer')))
-invites(project_id, email_or_phone, role, token_hash, expires_at, revoked_at, used_at)
+invites(project_id, email_or_phone, display_name, role, token_hash, expires_at, revoked_at,
+        used_at, used_by, created_by)          -- display_name/used_by/created_by added R1
 deliverables(project_id, title, due_date, status text, current_version int)
 versions(deliverable_id, number int, asset_path, asset_sha256, copy_text,
          card_message_id text, created_by)

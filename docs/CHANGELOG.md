@@ -1,5 +1,41 @@
 # Changelog
 
+## Round 1: accounts, workspace, projects, rooms (FR-1, FR-2, FR-3) (2026-11-20)
+
+**Built**
+- FR-1: magic-link sign-in (`/login`, `/auth/callback`), onboarding (your name + workspace),
+  owner membership, projects list with empty state.
+- FR-2: "Create project" makes two Nexconn group channels (client room + internal room) with
+  the Drifty AI bot as owner and a welcome message in each; channel ids stored on the project.
+- FR-3: AM creates single-use invite links (7-day expiry, revocable, stored as a keyed hash)
+  with role approver or reviewer; `/join/[token]` → client picks a name, gets a Nexconn user and
+  joins **only** the client room; `/room/[projectId]` is the client's mobile-first room.
+  One approver per project; "Make approver" switches it.
+- Access control: RLS on all six tables (read-only for workspace members, no client writes);
+  every route re-checks role/membership; clients get a signed httpOnly cookie, never the
+  internal room. `proxy.ts` refreshes Supabase sessions and gates `/app`.
+- Removed the Round 0 `/spike` page and routes.
+- Migrations in `supabase/migrations/`, applied with `pnpm db:migrate`.
+- Tests: 19 (tokens, guest cookie, permissions, room ids, signing, cards).
+
+**Try it**
+1. Open the live URL → **Start free** → enter your email → open the link in the email.
+2. Enter your name and agency name → create the project **Diwali campaign**.
+3. In **Invite a client**, add yourself (phone) as **Approver** → **Create invite link** → send
+   the link to your phone (WhatsApp).
+4. On the phone, open the link → **Join the room**. Chat AM ↔ client live in the Client room.
+5. On the phone, open `<live URL>/app/projects/<id>` (the AM's URL): you're sent to sign-in,
+   and the client never sees the Internal room.
+
+**Verified locally:** sign-in → onboarding → project with two rooms → invite → join on a
+375 px view → live chat both ways; client blocked from internal room, agency pages and
+owner/AM APIs; RLS blocks anon and all direct writes; used invite link shows "already used".
+
+**Known issues:** clients don't see messages sent before they joined (Nexconn group history
+for new members); a client who clears cookies needs a new invite link; team invites (AM,
+creative) aren't built yet; onboarding doesn't ask for a job title (everyone who signs up is the
+owner of a new workspace).
+
 ## Round 0: foundation + Nexconn spike (deployed 2026-11-20)
 
 Live: https://drifty-six.vercel.app (spike: https://drifty-six.vercel.app/spike)

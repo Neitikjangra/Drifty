@@ -51,7 +51,7 @@ Values live only in `.env.local` and in Vercel project settings. Never commit th
 | `AI_MODEL` | `gemini-3.8-flash` |
 | `SENTRY_DSN` | Error monitoring |
 | `MAGIC_LINK_SIGNING_SECRET` | Signs client invite links |
-| `SPIKE_ENABLED` | `1` turns on the Round 0 `/spike` test page |
+| `SUPABASE_DB_URL` | Postgres connection string, used only by `pnpm db:migrate` (not deployed) |
 
 ## Scripts
 
@@ -60,14 +60,23 @@ pnpm lint        # ESLint
 pnpm typecheck   # next typegen + tsc
 pnpm test        # Vitest unit tests
 pnpm build       # production build
+pnpm db:migrate  # apply supabase/migrations/*.sql (needs SUPABASE_DB_URL)
 ```
 
-## Round 0 spike
+### Supabase Auth settings
 
-With `SPIKE_ENABLED=1` and the Nexconn keys set, open `/spike` in two browsers. Join as Alice in
-one and Bob in the other, press **Post test card**, then **Approve v1**. The status chip turns
-green in both browsers. The server writes the status through Nexconn message metadata, and
-clients only read it.
+In Supabase → Authentication → URL Configuration, set **Site URL** to your app URL and add
+`<app URL>/auth/callback` (and `http://localhost:3000/auth/callback` for local work) to
+**Redirect URLs**. Use a custom SMTP sender for production email.
+
+## How access works
+
+- Agency users sign in with a Supabase magic link. The first sign-in creates a workspace
+  they own.
+- Each project has two Nexconn group channels: a **client room** and an **internal room**.
+- Clients join from a single-use invite link (7 days, revocable). They get a signed cookie, no
+  password, and are added only to the client room.
+- Tables have row-level security. Writes happen only on the server after a permission check.
 
 ## Licences
 

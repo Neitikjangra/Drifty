@@ -4,9 +4,8 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 0 done, awaiting "approved"**. Live: https://drifty-six.vercel.app/spike
-  (verified 2 browsers on production). Still open: push to GitHub (need repo URL), user's
-  real-phone check. Next after approval: Round 1, and set `SPIKE_ENABLED` off in Vercel.
+- Round: **Round 1 built, awaiting "approved"**. Round 0 approved; spike removed and
+  `SPIKE_ENABLED` deleted from Vercel. Human task: Supabase Auth URL settings for the live URL.
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-20
@@ -39,11 +38,21 @@ then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 - [ ] Report + wait for "approved"
 
 ## Round 1: FR-1, FR-2, FR-3
-- [ ] Magic-link sign-up/login, onboarding (workspace, role), projects list
-- [ ] Project creation → 2 Nexconn group channels + AI bot; channel ids stored
-- [ ] Client invites `/join/[token]` (7-day, revocable, hashed), approver role
-- [ ] RLS + server checks; client can't reach the internal room
-- [ ] Checks, deploy, changelog, report
+- [x] Migration 0001 (6 tables + RLS) applied via `pnpm db:migrate` (SUPABASE_DB_URL in .env.local)
+- [x] Magic-link sign-up/login, onboarding (name + workspace; creator = owner), projects list
+- [x] Project creation → 2 Nexconn group channels + AI bot; channel ids stored
+- [x] Client invites `/join/[token]` (7-day, single-use, revocable, keyed hash), approver role
+- [x] Guest identity = signed httpOnly cookie (`drifty_guest`), no Supabase account
+- [x] RLS + server checks; client can't reach the internal room (verified)
+- [x] lint / typecheck / 19 tests / build
+- [ ] Deploy + Supabase Auth URL config (human) + report
+
+**Round 1 lessons:** Next 16 cache components need `connection()` before Supabase calls and each
+page's data inside its own `<Suspense>`; ChatUI hooks get called with "" ids (filter them);
+ChatUI shows group-member nicknames (that's how the bot gets "Drifty AI"); React dev double
+effects need the shared chat instance ref-counted (`startChat`/`releaseChat`).
+Local testing: `node scripts/dev-login-link.mjs am.test@drifty.test` prints a localhost
+sign-in link for a test agency user (no email sent).
 
 ## Round 2: FR-4, FR-5, FR-6, FR-10, FR-13 core
 - [ ] Deliverable + v1 upload (Storage), card posted in client room

@@ -21,6 +21,8 @@ const supabaseAdminSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: key,
 });
 
+const signingSchema = z.object({ MAGIC_LINK_SIGNING_SECRET: z.string().min(32) });
+
 export class MissingEnvError extends Error {
   constructor(public readonly keys: string[]) {
     super(`Missing or invalid environment variables: ${keys.join(", ")}`);
@@ -46,9 +48,12 @@ function emptyToUndefined(v: string | undefined) {
 export const nexconnEnv = () => read(nexconnSchema);
 export const supabaseEnv = () => read(supabaseSchema);
 export const supabaseAdminEnv = () => read(supabaseAdminSchema);
+export const signingSecret = () => read(signingSchema).MAGIC_LINK_SIGNING_SECRET;
 
-/** The spike routes are test-only and must be switched on explicitly. */
-export const spikeEnabled = () => process.env.SPIKE_ENABLED === "1";
+/** Public base URL for links we hand out (invite links). */
+export function appUrl(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/^"(.*)"$/, "$1") || "http://localhost:3000").replace(/\/+$/, "");
+}
 
 /** Names of the keys the app needs, with presence only (for /api/health). */
 export function envPresence(): Record<string, boolean> {
