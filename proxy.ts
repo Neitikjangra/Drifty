@@ -7,6 +7,15 @@ import { createServerClient } from "@supabase/ssr";
  * on the server.
  */
 export async function proxy(request: NextRequest) {
+  // Supabase falls back to the Site URL (e.g. "/?code=…") when the callback isn't in its
+  // allowed redirect list. Send those sign-in links to our callback instead of losing them.
+  const { pathname, searchParams } = request.nextUrl;
+  if (pathname === "/" && (searchParams.has("code") || searchParams.has("token_hash"))) {
+    const callback = request.nextUrl.clone();
+    callback.pathname = "/auth/callback";
+    return NextResponse.redirect(callback);
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) return NextResponse.next();
@@ -34,5 +43,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/login", "/auth/:path*"],
+  matcher: ["/", "/app/:path*", "/login", "/auth/:path*"],
 };

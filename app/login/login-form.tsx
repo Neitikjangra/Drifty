@@ -14,7 +14,13 @@ export function LoginForm() {
   const next = params.get("next") ?? "/app";
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>(
-    linkError ? { kind: "error", message: "That sign-in link has expired or was already used. Send a new one." } : { kind: "idle" },
+    linkError
+      ? {
+          kind: "error",
+          message:
+            "That sign-in link didn't work. It may have expired, been used already, or been opened in a different browser. Send a new one and open it in this browser.",
+        }
+      : { kind: "idle" },
   );
 
   async function submit(e: React.FormEvent) {
