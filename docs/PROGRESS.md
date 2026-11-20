@@ -4,9 +4,11 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 0 in progress**. Spike **verified live locally** (2 browsers, approve → both
-  green ≤2 s; 375 px emulation OK). **Blocked on** GitHub repo URL + `vercel login` to commit
-  and deploy, and a real-phone check. Next: git init + push, `vercel --prod`, env vars in Vercel.
+- Round: **Round 0 done, awaiting "approved"**. Live: https://drifty-six.vercel.app/spike
+  (verified 2 browsers on production). Still open: push to GitHub (need repo URL), user's
+  real-phone check. Next after approval: Round 1, and set `SPIKE_ENABLED` off in Vercel.
+- Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
+  Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-20
 
 ## Section 0: setup
@@ -30,8 +32,9 @@ then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 - [x] `/api/health`
 - [x] README (setup, env var names)
 - [x] lint / typecheck / test (10) / build pass locally
-- [ ] git init + first commit + push to GitHub (needs repo URL)
-- [ ] `vercel --prod` (needs `vercel login`) + env vars in Vercel
+- [x] git init + first commit (main)
+- [ ] push to GitHub (needs repo URL)
+- [x] `vercel --prod` + env vars in Vercel → https://drifty-six.vercel.app, spike verified live
 - [x] CHANGELOG started
 - [ ] Report + wait for "approved"
 
