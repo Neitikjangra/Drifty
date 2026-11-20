@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
@@ -32,17 +32,92 @@ function signInErrorMessage(err: unknown): string {
 
 type State = { kind: "idle" } | { kind: "sending" } | { kind: "sent"; email: string } | { kind: "error"; message: string };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Enter the code from the sign-in email. Works whichever browser or app opened the email. */
+function CodeForm({ email: initialEmail, next, editableEmail }: { email: string; next: string; editableEmail: boolean }) {
+  const router = useRouter();
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
+    const token = code.replace(/\s/g, "");
+    if (!EMAIL_RE.test(email.trim())) return setError("Enter the email address the code was sent to.");
+    if (!/^\d{6,10}$/.test(token)) return setError("Enter the code from the email (numbers only).");
+    setBusy(true);
+    setError("");
+    const { error: err } = await supabaseBrowser().auth.verifyOtp({ email: email.trim(), token, type: "email" });
+    if (err) {
+      setBusy(false);
+      setError(
+        /expired|invalid/i.test(err.message)
+          ? "That code is wrong or has expired. Check the latest email, or send a new one."
+          : "Couldn't sign you in. Please try again.",
+      );
+      return;
+    }
+    router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/app");
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={verify} className="space-y-3" noValidate>
+      {editableEmail && (
+        <>
+          <label htmlFor="code-email" className="text-sm font-medium">
+            Email the code was sent to
+          </label>
+          <input
+            id="code-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@agency.com"
+            className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 text-base outline-none focus-visible:ring-2 sm:text-sm"
+          />
+        </>
+      )}
+      <label htmlFor="code" className="text-sm font-medium">
+        Code from the email
+      </label>
+      <input
+        id="code"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="123456"
+        maxLength={12}
+        className="border-input bg-background focus-visible:ring-ring h-11 w-full rounded-md border px-3 text-center font-mono text-lg tracking-[0.3em] outline-none focus-visible:ring-2"
+      />
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      <Button type="submit" className="w-full" disabled={busy}>
+        {busy ? "Signing in…" : "Sign in with code"}
+      </Button>
+    </form>
+  );
+}
+
 export function LoginForm() {
   const params = useSearchParams();
   const linkError = params.get("error") === "link";
   const next = params.get("next") ?? "/app";
   const [email, setEmail] = useState("");
+  const [haveCode, setHaveCode] = useState(false);
   const [state, setState] = useState<State>(
     linkError
       ? {
           kind: "error",
           message:
-            "That sign-in link didn't work. It may have expired, been used already, or been opened in a different browser. Send a new one and open it in this browser.",
+            "That sign-in link didn't work in this browser. Use the code from the same email below, or send a new email.",
         }
       : { kind: "idle" },
   );
@@ -50,7 +125,7 @@ export function LoginForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const value = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (!EMAIL_RE.test(value)) {
       setState({ kind: "error", message: "Enter a valid email address." });
       return;
     }
@@ -74,17 +149,26 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle className="text-xl">Sign in to Drifty</CardTitle>
         <CardDescription>
-          We&apos;ll email you a sign-in link. New here? The same link creates your account.
+          We&apos;ll email you a sign-in link and code. New here? The same email creates your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {state.kind === "sent" ? (
-          <div className="space-y-3" role="status">
+          <div className="space-y-4" role="status">
             <p className="text-sm">
-              Check <span className="font-medium">{state.email}</span> for your sign-in link. Open it on this device.
+              We emailed <span className="font-medium">{state.email}</span>. Tap the link in the email, or type the code
+              from it here:
             </p>
-            <Button variant="outline" className="w-full" onClick={() => setState({ kind: "idle" })}>
+            <CodeForm email={state.email} next={next} editableEmail={false} />
+            <Button variant="ghost" className="w-full" onClick={() => setState({ kind: "idle" })}>
               Use a different email
+            </Button>
+          </div>
+        ) : haveCode ? (
+          <div className="space-y-3">
+            <CodeForm email={email} next={next} editableEmail />
+            <Button variant="ghost" className="w-full" onClick={() => setHaveCode(false)}>
+              Back
             </Button>
           </div>
         ) : (
@@ -110,6 +194,13 @@ export function LoginForm() {
             <Button type="submit" className="w-full" disabled={state.kind === "sending"}>
               {state.kind === "sending" ? "Sending…" : "Email me a sign-in link"}
             </Button>
+            <button
+              type="button"
+              onClick={() => setHaveCode(true)}
+              className="text-muted-foreground hover:text-foreground w-full text-center text-sm underline-offset-4 hover:underline"
+            >
+              Already have a code from an email? Enter it
+            </button>
           </form>
         )}
       </CardContent>
