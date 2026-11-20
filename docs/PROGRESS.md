@@ -45,7 +45,8 @@ then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 - [x] Guest identity = signed httpOnly cookie (`drifty_guest`), no Supabase account
 - [x] RLS + server checks; client can't reach the internal room (verified)
 - [x] lint / typecheck / 19 tests / build
-- [ ] Deploy + Supabase Auth URL config (human) + report
+- [x] Committed + pushed (0956dfe), deployed to https://drifty-six.vercel.app, prod smoke test OK
+- [ ] Supabase Auth URL config (human) + user's Try-it check → "approved"
 
 **Round 1 lessons:** Next 16 cache components need `connection()` before Supabase calls and each
 page's data inside its own `<Suspense>`; ChatUI hooks get called with "" ids (filter them);
