@@ -1,0 +1,116 @@
+# Drifty build progress
+
+Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.md,
+then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
+
+## Current status
+- Round: **Round 0 in progress**. Spike **verified live locally** (2 browsers, approve → both
+  green ≤2 s; 375 px emulation OK). **Blocked on** GitHub repo URL + `vercel login` to commit
+  and deploy, and a real-phone check. Next: git init + push, `vercel --prod`, env vars in Vercel.
+- Last updated: 2026-11-20
+
+## Section 0: setup
+- [x] Read CLAUDE.md, PRD, SRS, MASTER_PROMPT
+- [x] nexconn-chat Skill installed (.agents/skills, copied to .claude/skills)
+- [x] Environment checked: Node 22.16.0, pnpm 12.21.0, git 2.56.0, Vercel CLI 66.5.0 (login not yet checked)
+- [ ] `.env.local` filled: file exists; set so far: AI_MODEL, NEXT_PUBLIC_APP_URL (localhost), MAGIC_LINK_SIGNING_SECRET. Missing: Nexconn x4, Supabase x3, GEMINI_API_KEY, SENTRY_DSN
+- [x] Renamed `env.example` to `.env.example`
+- [ ] Project folder is a git repo linked to the public GitHub repo `drifty`
+- [ ] Vercel project linked (`vercel link`)
+
+## Round 0: foundation + Nexconn spike
+- [x] Next.js 16 + TS strict + Tailwind 4 + shadcn scaffold, PRD section 4 layout
+- [x] Supabase helpers (`lib/db/supabase-server.ts`, `supabase-browser.ts`). Not tested live: no keys
+- [x] `POST /api/nexconn/token` (server-side, App Secret). Not tested live: no keys
+- [x] `/spike` page + `/api/spike/{session,card,approve}` (gated by `SPIKE_ENABLED=1`)
+- [x] `drifty:deliverable` card element (`components/chat/deliverable-card-element.ts`)
+- [x] **Verified live:** Approve → server metadata → both browsers ≤2 s (event arrived in ~0.5 s)
+- [x] 375 px emulation: ChatUI switches to single-pane view with back arrow; card + chat usable
+- [ ] **Verify on a real phone** (ChatUI docs say portrait mobile isn't a supported target)
+- [x] `/api/health`
+- [x] README (setup, env var names)
+- [x] lint / typecheck / test (10) / build pass locally
+- [ ] git init + first commit + push to GitHub (needs repo URL)
+- [ ] `vercel --prod` (needs `vercel login`) + env vars in Vercel
+- [x] CHANGELOG started
+- [ ] Report + wait for "approved"
+
+## Round 1: FR-1, FR-2, FR-3
+- [ ] Magic-link sign-up/login, onboarding (workspace, role), projects list
+- [ ] Project creation → 2 Nexconn group channels + AI bot; channel ids stored
+- [ ] Client invites `/join/[token]` (7-day, revocable, hashed), approver role
+- [ ] RLS + server checks; client can't reach the internal room
+- [ ] Checks, deploy, changelog, report
+
+## Round 2: FR-4, FR-5, FR-6, FR-10, FR-13 core
+- [ ] Deliverable + v1 upload (Storage), card posted in client room
+- [ ] Approve / Request changes (approver only, server-verified)
+- [ ] In-place status via message extensions; superseded older cards
+- [ ] New version upload (vN+1)
+- [ ] Insert-only approvals row (copy snapshot, SHA-256)
+- [ ] Checks, deploy, changelog, report
+
+## Round 3: FR-7, FR-8, FR-9, FR-12
+- [ ] Image + voice messages; webhook with signature verification; message store
+- [ ] Voice transcription (Nexconn STT or Gemini fallback)
+- [ ] AI-1 change list card; AM confirm/edit/reject
+- [ ] AI-2 conflict card for approver; choice recorded
+- [ ] Checks, deploy, changelog, report
+
+## Round 4: FR-11, FR-13 full, FR-14
+- [ ] AI-3 drift check card on new version; AM actions
+- [ ] Ledger page + CSV export
+- [ ] Project dashboard
+- [ ] Checks, deploy, changelog, report
+
+## Round 5: production hardening + launch surface
+- [ ] Landing, pricing, FAQ, privacy/terms (legal text from team)
+- [ ] Onboarding with seeded demo project
+- [ ] RLS/route audit, rate limits, Sentry, error states, mobile client room
+- [ ] Playwright demo-path test vs production
+- [ ] SUBMISSION.md, DEMO_SCRIPT.md, seed script
+- [ ] Checks, deploy, changelog, report
+
+## Round 6: Should items (only if approved)
+- [ ] FR-17 nudges
+- [ ] FR-16 approval drift
+- [ ] FR-15 scope drift
+- [ ] FR-18 daily digest
+
+## Notes / decisions
+- AI model: Gemini 3.8 Flash (`gemini-3.8-flash`); STT_API_KEY not needed.
+
+### Nexconn decision record (from docs.nexconn.ai + installed SDK types, 2026-11-20)
+- **Integration layer: Layer 2, ChatUI extension.** Web group channels are covered by ChatUI
+  (`@nexconn/chatui` 26.5.0 Apache-2.0, `@nexconn/chat` + `@nexconn/engine` 26.5.1 own licence).
+  Cards are registered with `app.registerCustomMessages([...])` before `ready()`; ChatUI renders
+  `nc-c-<tagName>` and sets `.message` (Chat SDK `Message`: `messageId`, `content`, `metadata: Map`).
+- **Live status:** server calls `POST /v4/channel-type/message/metadata/set` (needs the card sent
+  with `hasMetadata: true`, group = channelType 3). Clients get
+  `MessageHandler.onMessageMetadataUpdated({messageId, channelIdentifier, metadata})` via
+  `NCEngine.addMessageHandler`. The card element subscribes and re-renders its chip itself.
+  Use `isEchoToSender: 1` when the operator also needs the echo.
+- **Server side:** no `@nexconn/*` Node server SDK exists on npm, so we call the Platform Chat
+  REST API from `lib/nexconn/` with headers App-Key, Nonce, Timestamp,
+  Signature = sha1(AppSecret+Nonce+Timestamp) hex. Base URL per data center
+  (Singapore `api.sg-light-api.com`, backup `api-b.`). Client must set the matching `areaCode`.
+- Endpoints confirmed: token `POST /v4/auth/access-token/issue {userId,name,avatarUrl?}`;
+  group create `POST /v4/group-channel/create {channelId,name,owner,userIds≤30}`;
+  join `POST /v4/group-channel/join {channelId,userIds≤100}`; group send (custom type ≤32 chars,
+  not `RC:`, content ≤10 KB, `hasMetadata`/`metadata`).
+- **Webhooks:** signed with the **App Secret** (same sha1 formula, headers AppKey/Nonce/Timestamp/
+  Signature); 5 s timeout, 2 retries. `NEXCONN_WEBHOOK_SECRET` is not needed. Signature doesn't
+  cover the body → reject stale timestamps + dedupe on message id.
+- **Spike lessons (keep for every card type):**
+  1. ChatUI bundles Lit internals compiled for Lit's *production* build; `next dev` loads Lit's
+     development build → "_$initialize is not a function". `next.config.ts` aliases Lit to its
+     production files in dev.
+  2. ChatUI re-sets `.message` with its cached model (stale metadata) and detaches/re-attaches
+     bubbles on hover. Cards must (a) merge a live-metadata cache keyed by message id and
+     (b) only rebuild their DOM when the visible state changes, or clicks get swallowed.
+  3. Open the room ~0.8 s after connect (timers, not rAF: rAF never fires in background tabs).
+  4. Nexconn SDK's own log upload to logcollection.ronghub.com is CORS-blocked on localhost
+     (console errors not from our code). Re-check on the production domain in Round 5.
+- **Risk: ChatUI docs say portrait mobile browsers are "not a supported target".** This conflicts
+  with the 375 px client room (NFR-3/6). Round 0 spike must test it on a phone; fallback is the
+  PRD's Chat SDK + own React list for the mobile client room.
