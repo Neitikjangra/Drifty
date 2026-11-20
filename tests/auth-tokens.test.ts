@@ -4,6 +4,7 @@ import {
   hashInviteToken,
   INVITE_TTL_MS,
   inviteState,
+  inviteTokenFor,
   isWellFormedInviteToken,
   newInviteToken,
   signGuestSession,
@@ -29,14 +30,24 @@ describe("invite tokens", () => {
     expect(isWellFormedInviteToken("a".repeat(42) + "!")).toBe(false);
   });
 
-  it("expire after 7 days, and revoked/used links never work", () => {
-    expect(INVITE_TTL_MS).toBe(7 * 24 * 3600 * 1000);
+  it("last 30 days, are reusable, and stop only when revoked or expired", () => {
+    expect(INVITE_TTL_MS).toBe(30 * 24 * 3600 * 1000);
     const now = Date.parse("2026-11-20T10:00:00Z");
-    const base = { expires_at: "2026-11-27T10:00:00Z", revoked_at: null, used_at: null };
+    const base = { expires_at: "2026-12-20T10:00:00Z", revoked_at: null };
     expect(inviteState(base, now)).toBe("ok");
-    expect(inviteState(base, Date.parse("2026-11-27T10:00:00Z"))).toBe("expired");
+    expect(inviteState(base, Date.parse("2026-12-20T10:00:00Z"))).toBe("expired");
     expect(inviteState({ ...base, revoked_at: "2026-11-21T00:00:00Z" }, now)).toBe("revoked");
-    expect(inviteState({ ...base, used_at: "2026-11-21T00:00:00Z" }, now)).toBe("used");
+  });
+
+  it("derive the same link for the same invite (so it can be copied again), unique per invite", () => {
+    const a1 = inviteTokenFor(SECRET, "11111111-1111-4111-8111-111111111111");
+    const a2 = inviteTokenFor(SECRET, "11111111-1111-4111-8111-111111111111");
+    const b = inviteTokenFor(SECRET, "22222222-2222-4222-8222-222222222222");
+    expect(a1).toEqual(a2);
+    expect(a1.token).not.toBe(b.token);
+    expect(isWellFormedInviteToken(a1.token)).toBe(true);
+    expect(a1.hash).toBe(hashInviteToken(SECRET, a1.token));
+    expect(inviteTokenFor("y".repeat(64), "11111111-1111-4111-8111-111111111111").token).not.toBe(a1.token);
   });
 });
 

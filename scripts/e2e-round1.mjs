@@ -164,7 +164,9 @@ const token = inv.json?.link?.split("/join/")[1];
 const { data: invRow } = await admin.from("invites").select("token_hash, expires_at").eq("id", inv.json?.id).single();
 check("invite token is not stored in plain text", invRow && !invRow.token_hash.includes(token));
 const days = (new Date(invRow?.expires_at).getTime() - Date.now()) / 86400000;
-check("invite expires in ~7 days", days > 6.9 && days <= 7.01, `${days.toFixed(2)} days`);
+check("invite link lasts ~30 days", days > 29.9 && days <= 30.01, `${days.toFixed(2)} days`);
+const copied = await am.req(`/api/invites/${inv.json?.id}/link`);
+check("'Copy link again' returns the same link", copied.status === 200 && copied.json?.link === inv.json?.link, `${copied.status}`);
 const joinPage = await client.req(`/join/${token}`);
 check("join page shows the invite", joinPage.status === 200 && joinPage.text.includes("Join the room"), `${joinPage.status}`);
 const amJoin = await am.req(`/api/join/${token}`, { method: "POST", body: { name: "AM" } });
@@ -172,10 +174,19 @@ check("agency user can't consume a client invite", amJoin.status === 409, `${amJ
 const join = await client.req(`/api/join/${token}`, { method: "POST", body: { name: "E2E Client" } });
 check("client joins with the link", join.status === 200 && join.json?.projectId === projectId, `${join.status} ${join.text.slice(0, 160)}`);
 check("client got an httpOnly guest cookie", client.jar.has("drifty_guest"));
-const reuse = await client2.req(`/api/join/${token}`, { method: "POST", body: { name: "Thief" } });
-check("invite link is single-use", reuse.status === 410, `${reuse.status}`);
-const reusePage = await client2.req(`/join/${token}`);
-check("used link page says 'already used'", reusePage.text.includes("already used"));
+// Same personal link on a second device (fresh browser, no cookie) → same person, straight in.
+const phone2 = new Browser("client second device");
+const reusePage = await phone2.req(`/join/${token}`);
+check("reopened link greets the person ('Welcome back')", reusePage.text.includes("Welcome back") && reusePage.text.includes("E2E Client"));
+const reuse = await phone2.req(`/api/join/${token}`, { method: "POST", body: {} });
+check("same link works again on another device (no name needed)", reuse.status === 200, `${reuse.status} ${reuse.text.slice(0, 120)}`);
+const { data: afterReuse } = await admin.from("project_guests").select("user_id").eq("project_id", projectId);
+check("reopening doesn't create a second person", afterReuse?.length === 1);
+check("second device is signed in as the same person", (await phone2.req(`/room/${projectId}`)).text.includes("approver"));
+const { data: usedRow } = await admin.from("invites").select("first_used_at, last_used_at").eq("id", inv.json?.id).single();
+check("first_used_at and last_used_at recorded", Boolean(usedRow?.first_used_at && usedRow?.last_used_at && usedRow.last_used_at >= usedRow.first_used_at));
+const cookieOnly = await client.req(`/room/${projectId}`);
+check("returning without the link (cookie) goes straight to the room", cookieOnly.status === 200 && cookieOnly.text.includes("approver"));
 const badTok = await client2.req(`/api/join/${"x".repeat(43)}`, { method: "POST", body: { name: "x" } });
 check("unknown invite token refused", badTok.status === 410, `${badTok.status}`);
 
@@ -216,12 +227,29 @@ check("exactly one approver after switch", roles?.filter((r) => r.role === "appr
 const badApprover = await am.req(`/api/projects/${projectId}`, { method: "PATCH", body: { approverId: "00000000-0000-4000-8000-000000000000" } });
 check("approver must be a client of the project", badApprover.status === 400, `${badApprover.status}`);
 
-// Revoke
+// Revoke an unused invite
 const inv3 = await am.req("/api/invites", { method: "POST", body: { projectId, emailOrPhone: "late@e2e.test", name: "Late", role: "reviewer" } });
 const rev = await am.req(`/api/invites/${inv3.json?.id}/revoke`, { method: "POST" });
-check("AM revokes an invite", rev.status === 200, `${rev.status}`);
-const revJoin = await stranger.req(`/api/join/${inv3.json?.link?.split("/join/")[1]}`, { method: "POST", body: { name: "Late" } });
-check("revoked link no longer works", revJoin.status === 410 && /cancelled/.test(revJoin.json?.error ?? ""), `${revJoin.status} ${revJoin.json?.error}`);
+check("AM cancels an unused invite", rev.status === 200, `${rev.status}`);
+const revToken = inv3.json?.link?.split("/join/")[1];
+const revJoin = await stranger.req(`/api/join/${revToken}`, { method: "POST", body: { name: "Late" } });
+check("cancelled link no longer works", revJoin.status === 410 && /cancelled/.test(revJoin.json?.error ?? ""), `${revJoin.status} ${revJoin.json?.error}`);
+const revPage = await stranger.req(`/join/${revToken}`);
+check("cancelled link page says 'Ask your agency for a new link'", revPage.text.includes("Ask your agency for a new link"));
+
+// Revoke a joined person's link → they lose the room; a new link brings them back
+const remove = await am.req(`/api/invites/${inv.json?.id}/revoke`, { method: "POST" });
+check("revoking a joined client's link removes them", remove.status === 200 && remove.json?.removedFromRoom === true, `${remove.status} ${remove.text.slice(0, 100)}`);
+const lockedOut = await client.req(`/room/${projectId}`);
+check("removed client can't open the room any more", lockedOut.text.includes("have access to this room"));
+const lockedTok = await client.req("/api/chat/directory", { method: "POST", body: { groupIds: [projRow.client_channel_id] } });
+check("removed client's directory no longer shows the room", (lockedTok.json?.groups?.length ?? 0) === 0, JSON.stringify(lockedTok.json));
+const reissue = await am.req(`/api/invites/${inv.json?.id}/reissue`, { method: "POST" });
+check("AM creates a new link for the same person", reissue.status === 201 && reissue.json?.link && reissue.json.link !== inv.json?.link, `${reissue.status}`);
+const back = await client.req(`/api/join/${reissue.json?.link?.split("/join/")[1]}`, { method: "POST", body: {} });
+check("new link brings the same person back without a name", back.status === 200, `${back.status} ${back.text.slice(0, 120)}`);
+const { data: backRows } = await admin.from("project_guests").select("user_id").eq("project_id", projectId);
+check("still one record per person after re-issue", backRows?.length === 2, `${backRows?.length}`);
 
 // Tenant isolation: another agency can't see this project
 await signIn(otherAgency, `other-${stamp}@drifty.test`);

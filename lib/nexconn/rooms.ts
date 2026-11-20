@@ -1,5 +1,5 @@
 import "server-only";
-import { createGroupChannel, issueAccessToken, joinGroupChannel, sendGroupMessage } from "./api";
+import { createGroupChannel, issueAccessToken, joinGroupChannel, leaveGroupChannel, sendGroupMessage } from "./api";
 import { BOT_NAME, BOT_USER_ID } from "./ids";
 
 /** Channel ids: "c"/"i" + project uuid without dashes (33 chars, alphanumeric). */
@@ -57,4 +57,8 @@ export async function createProjectRooms(input: {
 
 export async function addToRoom(channelId: string, nexconnUserIds: string[]) {
   if (nexconnUserIds.length) await joinGroupChannel(channelId, nexconnUserIds);
+}
+
+export async function removeFromRoom(channelId: string, nexconnUserIds: string[]) {
+  if (nexconnUserIds.length) await leaveGroupChannel(channelId, nexconnUserIds);
 }

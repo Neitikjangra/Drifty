@@ -6,13 +6,9 @@ import { JoinForm } from "./join-form";
 export const metadata: Metadata = { title: "Join your room · Drifty", robots: { index: false } };
 
 const PROBLEM: Record<string, { title: string; body: string }> = {
-  invalid: { title: "This link doesn't work", body: "Check you copied the whole link, or ask your agency for a new one." },
-  expired: { title: "This invite has expired", body: "Invite links last 7 days. Ask your agency to send a new one." },
-  revoked: { title: "This invite was cancelled", body: "Ask your agency to send a new one." },
-  used: {
-    title: "This invite was already used",
-    body: "If it was you, open the room from the device you joined on. Otherwise ask your agency for a new link.",
-  },
+  invalid: { title: "This link doesn't work", body: "Check you copied the whole link. Ask your agency for a new link." },
+  expired: { title: "This link has expired", body: "Links last 30 days. Ask your agency for a new link." },
+  revoked: { title: "This link was cancelled", body: "Ask your agency for a new link." },
 };
 
 export default function JoinPage({ params }: PageProps<"/join/[token]">) {
@@ -43,6 +39,7 @@ async function JoinContent({ params }: { params: PageProps<"/join/[token]">["par
       projectName={resolved.project.client_name}
       role={resolved.invite.role}
       suggestedName={resolved.invite.display_name ?? ""}
+      returningName={resolved.returningName}
     />
   );
 }

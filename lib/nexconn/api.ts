@@ -95,6 +95,11 @@ export async function joinGroupChannel(channelId: string, userIds: string[]) {
   await call("/v4/group-channel/join", { channelId, userIds: userIds.slice(0, 100) });
 }
 
+/** POST /v4/group-channel/leave: remove users from a group channel (max 100). */
+export async function leaveGroupChannel(channelId: string, userIds: string[]) {
+  await call("/v4/group-channel/leave", { channelId, userIds: userIds.slice(0, 100) });
+}
+
 export interface SendGroupMessageInput {
   fromUserId: string;
   channelId: string;

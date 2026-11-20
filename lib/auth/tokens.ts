@@ -5,12 +5,24 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
  * Pure functions (secret passed in) so they can be unit-tested.
  */
 
-export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Personal, reusable invite links last 30 days (revocable any time). */
+export const INVITE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Client session cookie: 30 days, renewed on every visit. */
 export const GUEST_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const b64url = (buf: Buffer) => buf.toString("base64url");
 
-/** A fresh invite token (256 random bits) and the hash we store. The token is never stored. */
+/**
+ * The link token for an invite, derived from its id with the server secret (256-bit HMAC).
+ * Deriving it means the AM can copy the same link again later without us ever storing
+ * the token itself; only its keyed hash is in the database.
+ */
+export function inviteTokenFor(secret: string, inviteId: string): { token: string; hash: string } {
+  const token = b64url(createHmac("sha256", secret).update(`invite-link:${inviteId}`).digest());
+  return { token, hash: hashInviteToken(secret, token) };
+}
+
+/** A random token (used by tests and for pre-derivation invites). */
 export function newInviteToken(secret: string): { token: string; hash: string } {
   const token = b64url(randomBytes(32));
   return { token, hash: hashInviteToken(secret, token) };
@@ -25,14 +37,14 @@ export function isWellFormedInviteToken(token: string): boolean {
   return /^[A-Za-z0-9_-]{43}$/.test(token);
 }
 
-export type InviteState = "ok" | "expired" | "revoked" | "used";
+export type InviteState = "ok" | "expired" | "revoked";
 
+/** Links are reusable: only revocation or expiry stops them. */
 export function inviteState(
-  invite: { expires_at: string; revoked_at: string | null; used_at: string | null },
+  invite: { expires_at: string; revoked_at: string | null },
   now: number = Date.now(),
 ): InviteState {
   if (invite.revoked_at) return "revoked";
-  if (invite.used_at) return "used";
   if (new Date(invite.expires_at).getTime() <= now) return "expired";
   return "ok";
 }

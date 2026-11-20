@@ -7,104 +7,179 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiJson } from "@/lib/client-fetch";
-import type { ProjectGuest } from "@/lib/db/types";
 
-export interface InviteRow {
-  id: string;
-  name: string | null;
-  contact: string;
-  role: "approver" | "reviewer";
-  expiresAt: string;
-  status: "pending" | "joined" | "revoked" | "expired";
+export interface PeopleData {
+  members: { guestId: string; name: string; role: "approver" | "reviewer"; inviteId: string | null; linkActive: boolean }[];
+  pending: { inviteId: string; name: string; contact: string; role: "approver" | "reviewer"; expiresAt: string }[];
+  past: { inviteId: string; name: string; status: "cancelled" | "expired" }[];
 }
 
-export function PeoplePanel(props: {
-  projectId: string;
-  canManage: boolean;
-  guests: ProjectGuest[];
-  approverId: string | null;
-  invites: InviteRow[];
-}) {
-  const router = useRouter();
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState("");
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
-  async function act(id: string, fn: () => Promise<unknown>) {
-    setBusyId(id);
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function PeoplePanel(props: { projectId: string; canManage: boolean; approverId: string | null } & PeopleData) {
+  const router = useRouter();
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  // The last link we fetched/created, shown so it can be copied manually if the clipboard is blocked.
+  const [shown, setShown] = useState<{ key: string; link: string; copied: boolean } | null>(null);
+
+  async function act(key: string, fn: () => Promise<unknown>, refresh = true) {
+    setBusyKey(key);
     setError("");
     try {
       await fn();
-      router.refresh();
+      if (refresh) router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   }
 
-  const pending = props.invites.filter((i) => i.status === "pending");
+  async function showLink(key: string, link: string) {
+    setShown({ key, link, copied: await copyText(link) });
+  }
+
+  const copyAgain = (inviteId: string) =>
+    act(
+      `copy-${inviteId}`,
+      async () => {
+        const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/link`, { method: "GET" });
+        await showLink(inviteId, link);
+      },
+      false,
+    );
+  const newLink = (inviteId: string) =>
+    act(`new-${inviteId}`, async () => {
+      const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/reissue`);
+      await showLink(inviteId, link);
+    });
+  const revoke = (inviteId: string, joined: boolean) => {
+    const msg = joined
+      ? "Remove this person from the client room? Their link stops working right away."
+      : "Cancel this invite link? It stops working right away.";
+    if (!window.confirm(msg)) return;
+    void act(`revoke-${inviteId}`, () => apiJson(`/api/invites/${inviteId}/revoke`));
+  };
+
+  const busy = busyKey !== null;
+  const LinkBox = ({ k }: { k: string }) =>
+    shown?.key === k ? (
+      <div className="bg-muted mt-2 space-y-1 rounded-md p-2" role="status">
+        <p className="text-xs font-medium">{shown.copied ? "Link copied. Send it on WhatsApp or email." : "Copy this link:"}</p>
+        <p className="font-mono text-[11px] break-all select-all">{shown.link}</p>
+      </div>
+    ) : null;
 
   return (
     <aside className="w-full space-y-5 rounded-lg border p-4 lg:w-80 lg:shrink-0">
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Client people</h2>
-        {props.guests.length === 0 ? (
+        {props.members.length === 0 ? (
           <p className="text-muted-foreground text-sm">No clients have joined yet. Invite them below.</p>
         ) : (
-          <ul className="space-y-2">
-            {props.guests.map((g) => (
-              <li key={g.user_id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{g.display_name}</span>
-                {g.role === "approver" ? (
-                  <Badge>Approver</Badge>
-                ) : props.canManage ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId !== null}
-                    onClick={() =>
-                      act(g.user_id, () =>
-                        apiJson(`/api/projects/${props.projectId}`, { method: "PATCH", body: { approverId: g.user_id } }),
-                      )
-                    }
-                  >
-                    {busyId === g.user_id ? "Saving…" : "Make approver"}
-                  </Button>
-                ) : (
-                  <Badge variant="secondary">Reviewer</Badge>
+          <ul className="space-y-3">
+            {props.members.map((m) => (
+              <li key={m.guestId} className="text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium">{m.name}</span>
+                  {m.role === "approver" ? <Badge>Approver</Badge> : <Badge variant="secondary">Reviewer</Badge>}
+                </div>
+                {props.canManage && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {m.inviteId && m.linkActive && (
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => copyAgain(m.inviteId!)}>
+                        {busyKey === `copy-${m.inviteId}` ? "Copying…" : "Copy link again"}
+                      </Button>
+                    )}
+                    {m.inviteId && !m.linkActive && (
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => newLink(m.inviteId!)}>
+                        {busyKey === `new-${m.inviteId}` ? "Creating…" : "New link"}
+                      </Button>
+                    )}
+                    {m.role === "reviewer" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() =>
+                          act(m.guestId, () =>
+                            apiJson(`/api/projects/${props.projectId}`, { method: "PATCH", body: { approverId: m.guestId } }),
+                          )
+                        }
+                      >
+                        {busyKey === m.guestId ? "Saving…" : "Make approver"}
+                      </Button>
+                    )}
+                    {m.inviteId && m.linkActive && (
+                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => revoke(m.inviteId!, true)}>
+                        {busyKey === `revoke-${m.inviteId}` ? "Removing…" : "Remove"}
+                      </Button>
+                    )}
+                  </div>
                 )}
+                {m.inviteId && <LinkBox k={m.inviteId} />}
               </li>
             ))}
           </ul>
         )}
-        {props.guests.length > 0 && !props.approverId && (
+        {props.members.length > 0 && !props.approverId && (
           <p className="text-xs text-amber-700">Nobody can approve yet. Mark one person as the approver.</p>
         )}
       </section>
 
+      {props.canManage && props.pending.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Invited, not joined yet</h2>
+          <ul className="space-y-3">
+            {props.pending.map((i) => (
+              <li key={i.inviteId} className="text-sm">
+                <span className="block truncate font-medium">{i.name}</span>
+                <span className="text-muted-foreground block text-xs">
+                  {i.role === "approver" ? "Approver" : "Reviewer"} · link valid until {shortDate(i.expiresAt)}
+                </span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => copyAgain(i.inviteId)}>
+                    {busyKey === `copy-${i.inviteId}` ? "Copying…" : "Copy link again"}
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => revoke(i.inviteId, false)}>
+                    {busyKey === `revoke-${i.inviteId}` ? "Cancelling…" : "Cancel"}
+                  </Button>
+                </div>
+                <LinkBox k={i.inviteId} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {props.canManage && <InviteForm projectId={props.projectId} hasApprover={Boolean(props.approverId)} />}
 
-      {props.canManage && pending.length > 0 && (
+      {props.canManage && props.past.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Pending invites</h2>
-          <ul className="space-y-2">
-            {pending.map((i) => (
-              <li key={i.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0">
-                  <span className="block truncate">{i.name ?? i.contact}</span>
-                  <span className="text-muted-foreground block text-xs">
-                    {i.role === "approver" ? "Approver" : "Reviewer"} · expires{" "}
-                    {new Date(i.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+          <h2 className="text-sm font-semibold">Cancelled or expired links</h2>
+          <ul className="space-y-3">
+            {props.past.map((i) => (
+              <li key={i.inviteId} className="text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block truncate">{i.name}</span>
+                    <span className="text-muted-foreground block text-xs">{i.status === "cancelled" ? "Cancelled" : "Expired"}</span>
                   </span>
-                </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busyId !== null}
-                  onClick={() => act(i.id, () => apiJson(`/api/invites/${i.id}/revoke`))}
-                >
-                  {busyId === i.id ? "Cancelling…" : "Cancel"}
-                </Button>
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => newLink(i.inviteId)}>
+                    {busyKey === `new-${i.inviteId}` ? "Creating…" : "New link"}
+                  </Button>
+                </div>
+                <LinkBox k={i.inviteId} />
               </li>
             ))}
           </ul>
@@ -143,7 +218,7 @@ function InviteForm({ projectId, hasApprover }: { projectId: string; hasApprover
         body: { projectId, name, emailOrPhone: contact, role },
       });
       setLink(res.link);
-      setCopied(false);
+      setCopied(await copyText(res.link));
       setName("");
       setContact("");
       router.refresh();
@@ -151,15 +226,6 @@ function InviteForm({ projectId, hasApprover }: { projectId: string; hasApprover
       setError(err instanceof Error ? err.message : "Couldn't create the invite.");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-    } catch {
-      setCopied(false);
     }
   }
 
@@ -206,9 +272,17 @@ function InviteForm({ projectId, hasApprover }: { projectId: string; hasApprover
 
       {link && (
         <div className="bg-muted space-y-2 rounded-md p-3" role="status">
-          <p className="text-xs font-medium">Share this link (WhatsApp or email). It works once and expires in 7 days.</p>
-          <p className="break-all font-mono text-xs">{link}</p>
-          <Button size="sm" variant="outline" onClick={copy} className="w-full">
+          <p className="text-xs font-medium">
+            {copied ? "Link copied. " : ""}Send it on WhatsApp or email. It&apos;s personal to this client, works on any
+            device for 30 days, and you can cancel it any time.
+          </p>
+          <p className="font-mono text-xs break-all select-all">{link}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={async () => setCopied(await copyText(link))}
+          >
             {copied ? "Copied" : "Copy link"}
           </Button>
         </div>

@@ -35,7 +35,25 @@ owner/AM APIs; RLS blocks anon and all direct writes; used invite link shows "al
 URL fallback) now reach `/auth/callback`; clear messages for each sign-in email error (hourly
 email limit, address not allowed, link opened in another browser); anonymous calls to project
 and invite routes now get 401 instead of 404.
-**Automated check:** `pnpm test:e2e` (against a local `pnpm start` on port 3100) runs 55
+**Bug fixes from the real test (Rajarshi, 2026-11-20):**
+- Bug 1, "invite already used": client links are now personal and reusable for 30 days on
+  any device. Reopening greets "Welcome back" and goes straight to the room. The AM can
+  "Copy link again", "Remove" (link off + room access removed), or make a "New link" for
+  the same person. Cancelled or expired links show "Ask your agency for a new link". The
+  30-day client cookie renews on every visit. Migration 0002: `used_at` → `first_used_at`,
+  plus `last_used_at`.
+- Bug 2, "new messages don't show": Nexconn confirmed Rajarshi is in the FIFA Campaign client
+  room (not the internal room), so membership wasn't it. Added connection handling:
+  status listener before connect; fresh token + reconnect on 31004; "open on another
+  device" banner with **Use here** on 31010; backoff retry on other disconnects; on
+  resume/online the app reconnects, and after >30 s asleep it forces a fresh connection.
+  Room header shows "Connecting… / Reconnecting… / You're offline". Room names are pushed
+  to ChatUI before opening (no raw channel id on new devices).
+- Measured locally (AM tab ↔ client tab at 375 px): 3 messages arrived in 1.41 s, 1.04 s and
+  0.66 s; after 65 s in the background 0.62 s; second tab of the same client 0.52 s;
+  Drifty AI bot message 0.91 s; after a forced reconnect 0.57 s.
+
+**Automated check:** `pnpm test:e2e` (against a local `pnpm start` on port 3100) runs 67
 end-to-end checks of every Round 1 route and permission rule and cleans up its test data.
 
 **Known issues:** clients don't see messages sent before they joined (Nexconn group history

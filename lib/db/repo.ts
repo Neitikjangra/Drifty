@@ -257,7 +257,11 @@ export async function setApprover(projectId: string, guestId: string) {
 
 // ------------------------------------------------------------ invites
 
+const INVITE_COLS =
+  "id, created_at, project_id, email_or_phone, display_name, role, expires_at, revoked_at, first_used_at, last_used_at, used_by";
+
 export async function insertInvite(row: {
+  id: string;
   project_id: string;
   email_or_phone: string;
   display_name: string | null;
@@ -265,86 +269,79 @@ export async function insertInvite(row: {
   token_hash: string;
   expires_at: string;
   created_by: string;
+  used_by?: string | null;
 }): Promise<Invite> {
   const db = supabaseAdmin();
-  return check(
-    "insertInvite",
-    await db
-      .from("invites")
-      .insert(row)
-      .select("id, created_at, project_id, email_or_phone, display_name, role, expires_at, revoked_at, used_at")
-      .single(),
-  ) as Invite;
+  return check("insertInvite", await db.from("invites").insert(row).select(INVITE_COLS).single()) as Invite;
 }
 
 export async function listInvites(projectId: string): Promise<Invite[]> {
   const db = supabaseAdmin();
   return check(
     "listInvites",
-    await db
-      .from("invites")
-      .select("id, created_at, project_id, email_or_phone, display_name, role, expires_at, revoked_at, used_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false }),
+    await db.from("invites").select(INVITE_COLS).eq("project_id", projectId).order("created_at", { ascending: false }),
   ) as Invite[];
 }
 
 export async function getInviteByHash(hash: string): Promise<Invite | null> {
   const db = supabaseAdmin();
-  return check(
-    "getInviteByHash",
-    await db
-      .from("invites")
-      .select("id, created_at, project_id, email_or_phone, display_name, role, expires_at, revoked_at, used_at")
-      .eq("token_hash", hash)
-      .maybeSingle(),
-  ) as Invite | null;
+  return check("getInviteByHash", await db.from("invites").select(INVITE_COLS).eq("token_hash", hash).maybeSingle()) as Invite | null;
 }
 
 export async function getInvite(inviteId: string): Promise<Invite | null> {
   const db = supabaseAdmin();
-  return check(
-    "getInvite",
+  return check("getInvite", await db.from("invites").select(INVITE_COLS).eq("id", inviteId).maybeSingle()) as Invite | null;
+}
+
+export async function getInviteTokenHash(inviteId: string): Promise<string | null> {
+  const db = supabaseAdmin();
+  const row = check(
+    "getInviteTokenHash",
+    await db.from("invites").select("token_hash").eq("id", inviteId).maybeSingle(),
+  ) as { token_hash: string } | null;
+  return row?.token_hash ?? null;
+}
+
+/** Records a use of a personal link: binds it to the guest on first use, stamps first/last use. */
+export async function markInviteUsed(invite: Invite, guestId: string) {
+  const db = supabaseAdmin();
+  const now = new Date().toISOString();
+  check(
+    "markInviteUsed",
     await db
       .from("invites")
-      .select("id, created_at, project_id, email_or_phone, display_name, role, expires_at, revoked_at, used_at")
-      .eq("id", inviteId)
-      .maybeSingle(),
-  ) as Invite | null;
-}
-
-/** Undo a claim when joining failed part-way. */
-export async function releaseInvite(inviteId: string) {
-  const db = supabaseAdmin();
-  check("releaseInvite", await db.from("invites").update({ used_at: null, used_by: null }).eq("id", inviteId));
-}
-
-/** Records who used an invite (after their profile exists; used_by references profiles). */
-export async function setInviteUsedBy(inviteId: string, guestId: string) {
-  const db = supabaseAdmin();
-  check("setInviteUsedBy", await db.from("invites").update({ used_by: guestId }).eq("id", inviteId));
-}
-
-/** Marks the invite used only if still unused (single use, race-safe). Returns false if someone beat us. */
-export async function claimInvite(inviteId: string): Promise<boolean> {
-  const db = supabaseAdmin();
-  const rows = check(
-    "claimInvite",
-    await db
-      .from("invites")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", inviteId)
-      .is("used_at", null)
-      .is("revoked_at", null)
-      .select("id"),
-  ) as { id: string }[];
-  return rows.length === 1;
+      .update({
+        used_by: invite.used_by ?? guestId,
+        first_used_at: invite.first_used_at ?? now,
+        last_used_at: now,
+      })
+      .eq("id", invite.id),
+  );
 }
 
 export async function revokeInvite(inviteId: string) {
   const db = supabaseAdmin();
   check(
     "revokeInvite",
-    await db.from("invites").update({ revoked_at: new Date().toISOString() }).eq("id", inviteId).is("used_at", null),
+    await db.from("invites").update({ revoked_at: new Date().toISOString() }).eq("id", inviteId).is("revoked_at", null),
+  );
+}
+
+/** Active (not revoked) invites that belong to a guest in a project. */
+export async function activeInvitesForGuest(projectId: string, guestId: string): Promise<Invite[]> {
+  const db = supabaseAdmin();
+  return check(
+    "activeInvitesForGuest",
+    await db.from("invites").select(INVITE_COLS).eq("project_id", projectId).eq("used_by", guestId).is("revoked_at", null),
+  ) as Invite[];
+}
+
+/** Removes a client from a project (after their link is revoked). Clears approver if needed. */
+export async function removeGuest(projectId: string, guestId: string) {
+  const db = supabaseAdmin();
+  check("removeGuest", await db.from("project_guests").delete().eq("project_id", projectId).eq("user_id", guestId));
+  check(
+    "clearApprover",
+    await db.from("projects").update({ approver_id: null }).eq("id", projectId).eq("approver_id", guestId),
   );
 }

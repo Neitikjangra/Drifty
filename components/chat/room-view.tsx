@@ -4,6 +4,32 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ChatHostHandle } from "./chat-host";
+import type { LinkState } from "./connection";
+
+/** Slim connection banner; hidden while connected. */
+function LinkBar({ state }: { state: LinkState }) {
+  if (state === "connected") return null;
+  if (state === "kicked") {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-900" role="status">
+        <span>This room is open on another device or tab, so new messages go there.</span>
+        <button
+          className="shrink-0 font-semibold underline underline-offset-2"
+          onClick={() => void import("./chat-host").then((h) => h.reconnectChat())}
+        >
+          Use here
+        </button>
+      </div>
+    );
+  }
+  const text = state === "offline" ? "You're offline. Messages will arrive when you're back online." : state === "connecting" ? "Connecting…" : "Reconnecting…";
+  return (
+    <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md px-3 py-1.5 text-xs" role="status" aria-live="polite">
+      <span className="inline-block size-2 animate-pulse rounded-full bg-amber-500" aria-hidden />
+      {text}
+    </div>
+  );
+}
 
 export interface RoomTab {
   channelId: string;
@@ -62,6 +88,20 @@ export function RoomView({ appKey, rooms, className }: { appKey: string; rooms: 
     await handleRef.current?.open(channelId).catch(() => {});
   }
 
+  // Connection indicator ("Reconnecting…").
+  const [link, setLink] = useState<LinkState>("connecting");
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+    void import("./chat-host").then((h) => {
+      if (!cancelled) unsub = h.onLinkState(setLink);
+    });
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+  }, []);
+
   const active = rooms.find((r) => r.channelId === activeId);
 
   return (
@@ -86,6 +126,8 @@ export function RoomView({ appKey, rooms, className }: { appKey: string; rooms: 
           {active?.hint && <span className="text-muted-foreground text-xs">{active.hint}</span>}
         </div>
       )}
+
+      {phase.kind === "ready" && <LinkBar state={link} />}
 
       {phase.kind === "loading" && (
         <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border text-sm" role="status">

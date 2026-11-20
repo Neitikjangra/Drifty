@@ -47,5 +47,8 @@ export interface Invite {
   role: GuestRole;
   expires_at: string;
   revoked_at: string | null;
-  used_at: string | null;
+  first_used_at: string | null;
+  last_used_at: string | null;
+  /** The guest this personal link belongs to (set on first use, or carried over on re-issue). */
+  used_by: string | null;
 }

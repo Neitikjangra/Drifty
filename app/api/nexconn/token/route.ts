@@ -1,4 +1,5 @@
 import { getCaller } from "@/lib/access";
+import { setGuestCookie } from "@/lib/auth/session";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
 import { issueAccessToken } from "@/lib/nexconn/api";
 
@@ -13,6 +14,8 @@ export async function POST() {
     if (caller.kind === "anonymous") return jsonError(401, "Please sign in or open your invite link again.");
     if (!caller.profile) return jsonError(403, "Finish setting up your account first.");
     const token = await issueAccessToken(caller.profile.nexconn_user_id, caller.profile.display_name);
+    // Clients: renew the 30-day session on every visit, so regular users never get logged out.
+    if (caller.kind === "guest") await setGuestCookie(caller.userId);
     return ok({ token, userId: caller.profile.nexconn_user_id });
   } catch (err) {
     return handleRouteError("nexconn/token", err);

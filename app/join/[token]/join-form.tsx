@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,27 +13,66 @@ export function JoinForm(props: {
   projectName: string;
   role: "approver" | "reviewer";
   suggestedName: string;
+  /** Set when this personal link was used before: go straight into the room. */
+  returningName: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(props.suggestedName);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(Boolean(props.returningName));
   const [error, setError] = useState("");
+  const started = useRef(false);
 
-  async function submit(e: React.FormEvent) {
+  async function join(withName?: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const { projectId } = await apiJson<{ projectId: string }>(`/api/join/${props.token}`, {
+        body: withName ? { name: withName } : {},
+      });
+      router.replace(`/room/${projectId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't open the room. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  // Returning visitor (any device): no form, straight into the room.
+  useEffect(() => {
+    if (props.returningName && !started.current) {
+      started.current = true;
+      void join();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.returningName]);
+
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Enter your name so the team knows who's talking.");
       return;
     }
-    setBusy(true);
-    setError("");
-    try {
-      const { projectId } = await apiJson<{ projectId: string }>(`/api/join/${props.token}`, { body: { name } });
-      router.replace(`/room/${projectId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't join. Please try again.");
-      setBusy(false);
-    }
+    void join(name);
+  }
+
+  if (props.returningName) {
+    return (
+      <div className="w-full max-w-sm space-y-4 text-center" role="status">
+        <p className="text-muted-foreground text-sm">{props.agencyName}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {props.returningName}</h1>
+        {error ? (
+          <>
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+            <Button className="h-11 w-full text-base" onClick={() => void join()} disabled={busy}>
+              Try again
+            </Button>
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">Opening {props.projectName}…</p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -59,7 +98,9 @@ export function JoinForm(props: {
       <Button type="submit" className="h-11 w-full text-base" disabled={busy}>
         {busy ? "Opening your room…" : "Join the room"}
       </Button>
-      <p className="text-muted-foreground text-center text-xs">No app or password needed.</p>
+      <p className="text-muted-foreground text-center text-xs">
+        No app or password needed. Keep this link: it&apos;s yours and opens the room on any device.
+      </p>
     </form>
   );
 }

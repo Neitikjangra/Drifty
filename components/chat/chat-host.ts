@@ -1,5 +1,6 @@
 "use client";
 import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
+import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
 import {
   CARD_TAG,
   clearLiveMetadata,
@@ -139,11 +140,34 @@ function createDirectory() {
   };
 }
 
+// ------------------------------------------------------------ connection state for the UI
+let linkState: LinkState = "connecting";
+const linkListeners = new Set<(s: LinkState) => void>();
+let keeper: ReturnType<typeof createConnectionKeeper> | null = null;
+
+/** Subscribe to connection state ("Reconnecting…" indicator). Returns an unsubscribe. */
+export function onLinkState(fn: (s: LinkState) => void): () => void {
+  linkListeners.add(fn);
+  fn(linkState);
+  return () => linkListeners.delete(fn);
+}
+function publish(s: LinkState) {
+  linkState = s;
+  linkListeners.forEach((fn) => fn(s));
+}
+/** Reconnect now (e.g. "Use here" after another device took over). */
+export function reconnectChat() {
+  void keeper?.reconnectNow();
+}
+
+const fetchToken = async () => (await postJson<{ token: string }>("/api/nexconn/token")).token;
+
 async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
-  const { token } = await postJson<{ token: string }>("/api/nexconn/token");
+  publish("connecting");
+  const token = await fetchToken();
   const chat = await import("@nexconn/chat");
   const { NCChatUIApplication } = await import("@nexconn/chatui");
-  const { NCEngine, LogLevel, MessageHandler, GroupChannelIdentifier } = chat;
+  const { NCEngine, LogLevel, MessageHandler, GroupChannelIdentifier, ConnectionStatusHandler } = chat;
 
   NCEngine.initialize({
     appKey: opts.appKey,
@@ -191,8 +215,39 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     }),
   );
 
-  const result = await NCEngine.connect({ token });
-  if (!result.isOk) throw new Error("We couldn't connect to the chat. Check your connection and try again.");
+  // Connection keeper: status listener registered BEFORE connect (docs), plus resume handling.
+  keeper = createConnectionKeeper({
+    engine: {
+      connect: (p) => NCEngine.connect(p),
+      disconnect: () => NCEngine.disconnect(),
+      getConnectionStatus: () => NCEngine.getConnectionStatus(),
+    },
+    getToken: fetchToken,
+    onState: publish,
+  });
+  NCEngine.addConnectionStatusHandler(
+    "drifty-connection",
+    new ConnectionStatusHandler({
+      onConnectionStatusChanged({ status, code }) {
+        keeper?.onStatus(status, code);
+      },
+    }),
+  );
+
+  let result = await NCEngine.connect({ token });
+  if (!result.isOk && result.code === CODE_TOKEN_INVALID) {
+    result = await NCEngine.connect({ token: await fetchToken() });
+  }
+  if (!result.isOk && result.code === CODE_KICKED) {
+    keeper.onStatus(STATUS.DISCONNECTED, CODE_KICKED);
+  } else if (!result.isOk) {
+    keeper.dispose();
+    keeper = null;
+    NCEngine.removeConnectionStatusHandler("drifty-connection");
+    throw new Error("We couldn't connect to the chat. Check your connection and try again.");
+  } else {
+    keeper.markConnected();
+  }
   // ChatUI caches profiles in localStorage; make sure the bot always shows its real name.
   app.updateUserProfile({ userId: BOT_USER_ID, name: BOT_NAME });
 
@@ -200,7 +255,12 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   root.style.width = "100%";
   root.style.height = "100%";
   opts.container.replaceChildren(root);
-  const openRoom = (channelId: string) => app.openChannel(new GroupChannelIdentifier(channelId), false);
+  // Push the room's name first, so the header never shows the raw channel id on a new device.
+  const openRoom = async (channelId: string) => {
+    const [g] = await dir.groups([channelId]);
+    if (g) app.updateGroupProfile(g);
+    return app.openChannel(new GroupChannelIdentifier(channelId), false);
+  };
   // Don't block start-up on this; the user can always tap the room in the list.
   void openWhenReady(() => openRoom(opts.initialChannelId));
 
@@ -209,6 +269,9 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       await openRoom(channelId);
     },
     async destroy() {
+      keeper?.dispose();
+      keeper = null;
+      NCEngine.removeConnectionStatusHandler("drifty-connection");
       NCEngine.removeMessageHandler("drifty-metadata");
       configureCardActions(null);
       clearLiveMetadata();

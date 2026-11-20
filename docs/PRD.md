@@ -216,7 +216,9 @@ projects(workspace_id, client_name, approver_id, rounds_included int default 2,
          client_channel_id text, internal_channel_id text, archived bool default false)
 project_guests(project_id, user_id, role text check (role in ('approver','reviewer')))
 invites(project_id, email_or_phone, display_name, role, token_hash, expires_at, revoked_at,
-        used_at, used_by, created_by)          -- display_name/used_by/created_by added R1
+        first_used_at, last_used_at, used_by, created_by)
+        -- R1: display_name/used_by/created_by added; used_at renamed first_used_at,
+        --     last_used_at added (links are reusable by the one invited person)
 deliverables(project_id, title, due_date, status text, current_version int)
 versions(deliverable_id, number int, asset_path, asset_sha256, copy_text,
          card_message_id text, created_by)
@@ -299,7 +301,7 @@ These are the minimum bars for letting a paying agency put real client work in D
 | Area | Requirement |
 | --- | --- |
 | Secrets | App Secret, service-role key and Gemini API key are server-only; none in the client bundle or git history; `.env.example` committed with blanks |
-| Auth | Supabase magic link for agency users; client invites are single-use signed tokens (stored hashed), 7-day expiry, revocable |
+| Auth | Supabase magic link for agency users. Client invites are personal, reusable links for one invited person: 30-day expiry, work on any device, revocable by the AM (revoking also removes room access), re-issuable ("Copy link again", "New link"). Link tokens are 256-bit HMACs of the invite id, stored only as a keyed hash. On join the client gets a secure, httpOnly, 30-day session cookie (renewed on each visit) so return visits go straight to the room |
 | Authorisation | RLS on every table by workspace and project; every API route re-checks the role (approver-only actions verified server-side) |
 | Tenant isolation | A user only gets Nexconn tokens and channel membership for projects they belong to; internal rooms never include guests |
 | Webhook | Verify Nexconn's signature, reject replays, deduplicate on `nexconn_msg_id`, and answer within 1 second |

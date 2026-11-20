@@ -7,7 +7,43 @@ import { RoomView } from "@/components/chat/room-view";
 import { getCaller, projectAccess } from "@/lib/access";
 import { allowedRooms, canManageProjects } from "@/lib/auth/permissions";
 import { listGuests, listInvites } from "@/lib/db/repo";
-import { PeoplePanel } from "./people-panel";
+import type { Invite, ProjectGuest } from "@/lib/db/types";
+import { PeoplePanel, type PeopleData } from "./people-panel";
+
+/** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
+function buildPeople(guests: ProjectGuest[], invites: Invite[]): PeopleData {
+  const now = Date.now();
+  const alive = (i: Invite) => !i.revoked_at && new Date(i.expires_at).getTime() > now;
+  // invites are newest first
+  const members = guests.map((g) => {
+    const mine = invites.filter((i) => i.used_by === g.user_id);
+    const active = mine.find(alive);
+    return {
+      guestId: g.user_id,
+      name: g.display_name,
+      role: g.role,
+      inviteId: (active ?? mine[0])?.id ?? null,
+      linkActive: Boolean(active),
+    };
+  });
+  const guestIds = new Set(guests.map((g) => g.user_id));
+  const pending = invites
+    .filter((i) => !i.used_by && alive(i))
+    .map((i) => ({ inviteId: i.id, name: i.display_name ?? i.email_or_phone, contact: i.email_or_phone, role: i.role, expiresAt: i.expires_at }));
+  const seen = new Set<string>();
+  const past = invites
+    .filter((i) => !alive(i))
+    .filter((i) => !(i.used_by && guestIds.has(i.used_by)))
+    .filter((i) => !invites.some((o) => o !== i && alive(o) && (i.used_by ? o.used_by === i.used_by : o.email_or_phone === i.email_or_phone)))
+    .filter((i) => {
+      const key = i.used_by ?? i.email_or_phone;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((i) => ({ inviteId: i.id, name: i.display_name ?? i.email_or_phone, status: i.revoked_at ? ("cancelled" as const) : ("expired" as const) }));
+  return { members, pending, past };
+}
 
 export const metadata: Metadata = { title: "Project · Drifty" };
 
@@ -61,20 +97,7 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
             This project&apos;s rooms aren&apos;t available right now.
           </div>
         )}
-        <PeoplePanel
-          projectId={project.id}
-          canManage={canManage}
-          guests={guests}
-          approverId={project.approver_id}
-          invites={invites.map((i) => ({
-            id: i.id,
-            name: i.display_name,
-            contact: i.email_or_phone,
-            role: i.role,
-            expiresAt: i.expires_at,
-            status: i.revoked_at ? "revoked" : i.used_at ? "joined" : new Date(i.expires_at) < new Date() ? "expired" : "pending",
-          }))}
-        />
+        <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
       </div>
     </main>
   );

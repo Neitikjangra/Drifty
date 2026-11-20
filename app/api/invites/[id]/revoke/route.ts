@@ -1,24 +1,36 @@
-import { getCaller, projectAccess } from "@/lib/access";
-import { canManageProjects } from "@/lib/auth/permissions";
-import { getInvite, revokeInvite } from "@/lib/db/repo";
+import { activeInvitesForGuest, getProfile, removeGuest, revokeInvite } from "@/lib/db/repo";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
+import { manageableInvite } from "@/lib/invite-admin";
+import { removeFromRoom } from "@/lib/nexconn/rooms";
 
-/** POST /api/invites/:id/revoke: an unused invite link stops working (NFR-5). Owner/AM only. */
+const STATUS_MSG = { 401: "Please sign in first.", 403: "Only owners and account managers can do this.", 404: "Invite not found." };
+
+/**
+ * POST /api/invites/:id/revoke: the link stops working (NFR-5). If the person already
+ * joined and has no other active link for this project, they also lose access to the
+ * client room (removed from the Nexconn channel and project_guests). Owner/AM only.
+ */
 export async function POST(_req: Request, ctx: RouteContext<"/api/invites/[id]/revoke">) {
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonError(404, "Invite not found.");
   try {
-    const caller = await getCaller();
-    if (caller.kind === "anonymous") return jsonError(401, "Please sign in first.");
-    const invite = await getInvite(id);
-    if (!invite) return jsonError(404, "Invite not found.");
-    const access = await projectAccess(invite.project_id, caller);
-    if (!access || access.kind !== "member" || !canManageProjects(access.role)) {
-      return jsonError(404, "Invite not found.");
+    const res = await manageableInvite(id);
+    if (!res.ok) return jsonError(res.status, STATUS_MSG[res.status]);
+    const { invite, access } = res;
+    await revokeInvite(invite.id);
+
+    let removed = false;
+    if (invite.used_by) {
+      const stillActive = await activeInvitesForGuest(invite.project_id, invite.used_by);
+      if (stillActive.length === 0) {
+        const profile = await getProfile(invite.used_by);
+        await removeGuest(invite.project_id, invite.used_by);
+        if (profile && access.project.client_channel_id) {
+          await removeFromRoom(access.project.client_channel_id, [profile.nexconn_user_id]);
+        }
+        removed = true;
+      }
     }
-    if (invite.used_at) return jsonError(409, "This invite was already used.");
-    await revokeInvite(id);
-    return ok();
+    return ok({ removedFromRoom: removed });
   } catch (err) {
     return handleRouteError("invites/revoke", err);
   }
