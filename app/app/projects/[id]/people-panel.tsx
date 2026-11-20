@@ -53,8 +53,23 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
     act(
       `copy-${inviteId}`,
       async () => {
-        const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/link`, { method: "GET" });
-        await showLink(inviteId, link);
+        try {
+          const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/link`, { method: "GET" });
+          await showLink(inviteId, link);
+        } catch (err) {
+          // Links made before reusable links existed can't be shown again: offer a new one.
+          if (err instanceof Error && /older link/.test(err.message)) {
+            const yes = window.confirm(
+              "This link was created before links could be copied again. Create a new link for this person? Their old link will stop working, but they keep their chat history.",
+            );
+            if (!yes) return;
+            const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/reissue`);
+            await showLink(inviteId, link);
+            router.refresh();
+            return;
+          }
+          throw err;
+        }
       },
       false,
     );
