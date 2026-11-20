@@ -21,6 +21,19 @@ export async function getCaller(): Promise<Caller> {
   return { kind: "anonymous" };
 }
 
+/**
+ * For routes: resolves access, distinguishing "not signed in" (401) from
+ * "no access / doesn't exist" (404, so project ids aren't confirmed to strangers).
+ */
+export async function routeProjectAccess(
+  projectId: string,
+): Promise<{ ok: true; access: ProjectAccess } | { ok: false; status: 401 | 404 }> {
+  const caller = await getCaller();
+  if (caller.kind === "anonymous") return { ok: false, status: 401 };
+  const access = await projectAccess(projectId, caller);
+  return access ? { ok: true, access } : { ok: false, status: 404 };
+}
+
 export type ProjectAccess =
   | { kind: "member"; project: Project; role: MemberRole; userId: string; profile: Profile | null }
   | { kind: "guest"; project: Project; role: GuestRole; userId: string; profile: Profile | null };

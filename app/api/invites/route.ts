@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { projectAccess } from "@/lib/access";
+import { routeProjectAccess } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { INVITE_TTL_MS, newInviteToken } from "@/lib/auth/tokens";
 import { insertInvite } from "@/lib/db/repo";
@@ -21,8 +21,9 @@ export async function POST(req: Request) {
   const input = await readBody(req, body);
   if (!input) return jsonError(400, "Add the client's name and email or phone.");
   try {
-    const access = await projectAccess(input.projectId);
-    if (!access) return jsonError(404, "Project not found.");
+    const res = await routeProjectAccess(input.projectId);
+    if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const access = res.access;
     if (access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(403, "Only owners and account managers can invite clients.");
     }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { projectAccess } from "@/lib/access";
+import { routeProjectAccess } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { getGuestRole, setApprover } from "@/lib/db/repo";
 import { supabaseAdmin } from "@/lib/db/supabase-server";
@@ -18,8 +18,9 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
   const input = await readBody(req, body);
   if (!input) return jsonError(400, "Nothing to update.");
   try {
-    const access = await projectAccess(id);
-    if (!access) return jsonError(404, "Project not found.");
+    const res = await routeProjectAccess(id);
+    if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const access = res.access;
     if (access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(403, "Only owners and account managers can change this.");
     }

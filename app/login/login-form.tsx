@@ -6,6 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 
+/** Maps Supabase Auth error codes to clear, honest messages. */
+function signInErrorMessage(err: unknown): string {
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code?: unknown }).code) : "";
+  const msg = err instanceof Error ? err.message : "";
+  switch (code) {
+    case "over_email_send_rate_limit":
+      return "We've hit our hourly limit for sign-in emails. Please try again later, or use a sign-in link you already received.";
+    case "over_request_rate_limit":
+      return "Too many attempts from this device. Wait a minute and try again.";
+    case "email_address_not_authorized":
+      return "We can't send email to this address yet. Contact support and we'll add you.";
+    case "email_address_invalid":
+      return "That email address doesn't look right. Check it and try again.";
+    case "signup_disabled":
+    case "email_provider_disabled":
+    case "otp_disabled":
+      return "Email sign-in is switched off right now. Contact support.";
+  }
+  if (/for security purposes|after \d+ seconds/i.test(msg)) {
+    return "Please wait a minute before asking for another link.";
+  }
+  return "Couldn't send the link. Please try again.";
+}
+
 type State = { kind: "idle" } | { kind: "sending" } | { kind: "sent"; email: string } | { kind: "error"; message: string };
 
 export function LoginForm() {
@@ -41,11 +65,7 @@ export function LoginForm() {
       if (error) throw error;
       setState({ kind: "sent", email: value });
     } catch (err) {
-      const rate = err instanceof Error && /rate|seconds/i.test(err.message);
-      setState({
-        kind: "error",
-        message: rate ? "Too many attempts. Wait a minute and try again." : "Couldn't send the link. Please try again.",
-      });
+      setState({ kind: "error", message: signInErrorMessage(err) });
     }
   }
 

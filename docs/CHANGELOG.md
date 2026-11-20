@@ -31,6 +31,13 @@
 375 px view → live chat both ways; client blocked from internal room, agency pages and
 owner/AM APIs; RLS blocks anon and all direct writes; used invite link shows "already used".
 
+**Bug fixes after review (2026-11-20):** sign-in links that Supabase sends to `/?code=` (Site
+URL fallback) now reach `/auth/callback`; clear messages for each sign-in email error (hourly
+email limit, address not allowed, link opened in another browser); anonymous calls to project
+and invite routes now get 401 instead of 404.
+**Automated check:** `pnpm test:e2e` (against a local `pnpm start` on port 3100) runs 55
+end-to-end checks of every Round 1 route and permission rule and cleans up its test data.
+
 **Known issues:** clients don't see messages sent before they joined (Nexconn group history
 for new members); a client who clears cookies needs a new invite link; team invites (AM,
 creative) aren't built yet; onboarding doesn't ask for a job title (everyone who signs up is the

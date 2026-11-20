@@ -1,4 +1,4 @@
-import { projectAccess } from "@/lib/access";
+import { getCaller, projectAccess } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { getInvite, revokeInvite } from "@/lib/db/repo";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
@@ -8,9 +8,11 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/invites/[id]/r
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return jsonError(404, "Invite not found.");
   try {
+    const caller = await getCaller();
+    if (caller.kind === "anonymous") return jsonError(401, "Please sign in first.");
     const invite = await getInvite(id);
     if (!invite) return jsonError(404, "Invite not found.");
-    const access = await projectAccess(invite.project_id);
+    const access = await projectAccess(invite.project_id, caller);
     if (!access || access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(404, "Invite not found.");
     }
