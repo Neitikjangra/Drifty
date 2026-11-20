@@ -33,7 +33,7 @@ then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 - [x] README (setup, env var names)
 - [x] lint / typecheck / test (10) / build pass locally
 - [x] git init + first commit (main)
-- [ ] push to GitHub (needs repo URL)
+- [x] pushed to GitHub: https://github.com/Neitikjangra/drifty (main)
 - [x] `vercel --prod` + env vars in Vercel → https://drifty-six.vercel.app, spike verified live
 - [x] CHANGELOG started
 - [ ] Report + wait for "approved"
