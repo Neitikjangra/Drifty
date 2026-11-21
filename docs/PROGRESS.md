@@ -62,7 +62,8 @@ sign-in link for a test agency user (no email sent).
 - [x] New version (owner/AM/creative) posts vN+1, old card Superseded
 - [x] Approval row (copy snapshot, SHA-256) + drifty:receipt card
 - [x] 31 unit tests, E2E 67 + 36 (pnpm test:e2e against local :3100), two-browser UI run
-- [ ] Deploy + report + "approved"
+- [x] Deployed to https://drifty-six.vercel.app + pushed; prod smoke OK
+- [ ] User Try-it check → "approved"
 
 ## Round 3: FR-7, FR-8, FR-9, FR-12
 - [ ] Image + voice messages; webhook with signature verification; message store
