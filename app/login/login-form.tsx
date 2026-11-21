@@ -24,6 +24,10 @@ function signInErrorMessage(err: unknown): string {
     case "otp_disabled":
       return "Email sign-in is switched off right now. Contact support.";
   }
+  const status = typeof err === "object" && err && "status" in err ? Number((err as { status?: unknown }).status) : 0;
+  if (/error sending/i.test(msg) || status >= 500) {
+    return "Our email service couldn't send the message right now. Please try again in a few minutes, or contact support.";
+  }
   if (/for security purposes|after \d+ seconds/i.test(msg)) {
     return "Please wait a minute before asking for another link.";
   }
