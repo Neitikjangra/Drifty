@@ -40,9 +40,15 @@
 Gemini and Nexconn), and a browser check of both cards.
 
 **Known issues**
-- `gemini-3.8-flash` was returning 503/504 ("high demand") all day. While it does, summarising and
-  transcription fail with "The AI is busy right now…". The Round 3 E2E passed using the optional
-  `AI_FALLBACK_MODEL=gemini-3-flash-preview` (local only; production is still 3.8-only).
+- **Gemini quota:** after a day of testing, the API key hit `429 RESOURCE_EXHAUSTED` on
+  gemini-3.8-flash and gemini-3-flash-preview. Only gemini-3.5-flash still answers, at about 35 s per
+  change list (the target is 15 s). Production now sets
+  `AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash`: the main model is tried first (8 s
+  limit when a backup exists), then each backup in order. Raising the Gemini quota (billing) brings
+  back the fast path.
+- When the quota is used up, Summarise now says so ("usage limit is used up") instead of "busy".
+- If the conflict check can't run, the team is told, both in the Internal room and under the
+  button. It is never silently treated as "no conflicts".
 - Nexconn's own voice-to-text isn't used (not available for Web); Gemini transcribes instead.
 
 ## Auth update: email + password (2026-11-21)

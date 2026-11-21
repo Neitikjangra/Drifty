@@ -204,11 +204,16 @@ function DeliverableItem({
   async function summarise() {
     setSummary({ busy: true, text: "", error: false });
     try {
-      const r = await apiJson<{ items: number; conflicts: number; messages: number }>(`/api/deliverables/${item.id}/summarise`);
+      const r = await apiJson<{ items: number; conflicts: number; conflictCheck?: string; messages: number }>(`/api/deliverables/${item.id}/summarise`);
+      const failed = r.conflictCheck === "failed";
       setSummary({
         busy: false,
-        error: false,
-        text: `${r.items} change${r.items === 1 ? "" : "s"} suggested from ${r.messages} message${r.messages === 1 ? "" : "s"}${r.conflicts ? `, ${r.conflicts} conflict${r.conflicts > 1 ? "s" : ""} sent to the approver` : ""}. See the Internal room.`,
+        error: failed,
+        text:
+          `${r.items} change${r.items === 1 ? "" : "s"} suggested from ${r.messages} message${r.messages === 1 ? "" : "s"}` +
+          (r.conflicts ? `, ${r.conflicts} conflict${r.conflicts > 1 ? "s" : ""} sent to the approver` : "") +
+          `. See the Internal room.` +
+          (failed ? " The conflict check didn't run (AI busy): summarise again to check." : ""),
       });
     } catch (err) {
       setSummary({ busy: false, error: true, text: err instanceof Error ? err.message : "Couldn't summarise, try again." });

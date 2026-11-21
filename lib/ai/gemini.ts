@@ -35,10 +35,17 @@ function ai(timeoutMs = 25_000) {
   return c;
 }
 
+/** AI_MODEL first, then AI_FALLBACK_MODEL (comma-separated list allowed, tried in order). */
 function models(): string[] {
   const main = env("AI_MODEL") || "gemini-3.8-flash";
-  const fallback = env("AI_FALLBACK_MODEL");
-  return fallback && fallback !== main ? [main, fallback] : [main];
+  const fallbacks = env("AI_FALLBACK_MODEL").split(",").map((m) => m.trim()).filter(Boolean);
+  return [...new Set([main, ...fallbacks])];
+}
+
+/** 429 RESOURCE_EXHAUSTED: the API key's quota is used up (not a passing overload). */
+export function isQuota(err: unknown): boolean {
+  const e = err as { status?: number; message?: string };
+  return e?.status === 429 && /RESOURCE_EXHAUSTED|quota/i.test(e?.message ?? "");
 }
 
 /** Busy/unavailable: 429, any 5xx, timeouts and network errors. Bad requests (4xx) are not. */
@@ -59,14 +66,15 @@ export function isOverload(err: unknown): boolean {
 const busyUntil = new Map<string, number>();
 const BUSY_FOR_MS = 60_000;
 
-async function onAvailableModel<T>(task: string, call: (model: string) => Promise<T>): Promise<T> {
+/** `hasFallback`: shorter timeout for a model that has a fallback after it, so a busy main model fails fast. */
+async function onAvailableModel<T>(task: string, call: (model: string, hasFallback: boolean) => Promise<T>): Promise<T> {
   let last: unknown;
   const list = models();
   for (const [i, model] of list.entries()) {
     // Circuit breaker: skip a model that was busy in the last minute (if there's another to try).
     if (i < list.length - 1 && (busyUntil.get(model) ?? 0) > Date.now()) continue;
     try {
-      const out = await call(model);
+      const out = await call(model, i < list.length - 1);
       busyUntil.delete(model);
       return out;
     } catch (err) {
@@ -90,10 +98,11 @@ export async function generateJson<S extends z.ZodType>(opts: {
 }): Promise<z.infer<S>> {
   const started = Date.now();
   let lastProblem = "";
+  let quota = false;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const res = await onAvailableModel(opts.task, (model) =>
-        ai().models.generateContent({
+      const res = await onAvailableModel(opts.task, (model, hasFallback) =>
+        ai(hasFallback ? 8_000 : 35_000).models.generateContent({
           model,
           contents: opts.prompt,
           config: {
@@ -113,20 +122,25 @@ export async function generateJson<S extends z.ZodType>(opts: {
     } catch (err) {
       if (err instanceof AiError && err.message === "AI isn't configured.") throw err;
       lastProblem = err instanceof SyntaxError ? "parse" : isOverload(err) ? "busy" : "api";
+      quota = isQuota(err);
       if (lastProblem === "busy") break; // already retried inside onAvailableModel
     }
   }
   console.warn(`[ai] ${opts.task} failed (${lastProblem}) ms=${Date.now() - started}`);
   throw new AiError(
-    lastProblem === "busy" ? "The AI is busy right now. Couldn't summarise, try again in a minute." : "Couldn't summarise, try again.",
+    quota
+      ? "The AI's usage limit is used up for now. Couldn't summarise: try again later or ask the workspace owner to raise the Gemini quota."
+      : lastProblem === "busy"
+        ? "The AI is busy right now. Couldn't summarise, try again in a minute."
+        : "Couldn't summarise, try again.",
   );
 }
 
 /** Voice note → text (FR-7). Returns "" for silence. */
 export async function transcribeAudio(audio: Uint8Array, mimeType: string): Promise<string> {
   const started = Date.now();
-  const res = await onAvailableModel("transcribe", (model) =>
-    ai(45_000).models.generateContent({
+  const res = await onAvailableModel("transcribe", (model, hasFallback) =>
+    ai(hasFallback ? 20_000 : 45_000).models.generateContent({
       model,
       contents: [
         {

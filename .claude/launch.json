@@ -16,7 +16,7 @@
     {
       "name": "drifty-prod-ai-fallback",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "set AI_FALLBACK_MODEL=gemini-3-flash-preview&& pnpm start -p 3101"],
+      "runtimeArgs": ["/c", "set AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash&& pnpm start -p 3101"],
       "port": 3101
     }
   ]

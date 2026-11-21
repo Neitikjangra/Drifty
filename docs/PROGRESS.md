@@ -4,7 +4,7 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 3 built, awaiting "approved"** (human tasks: Nexconn webhook URL, AI_FALLBACK_MODEL decision, SMTP, real-phone test).
+- Round: **Round 3 built, awaiting "approved"** (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-21

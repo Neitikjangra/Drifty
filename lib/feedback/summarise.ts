@@ -93,6 +93,8 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
   const names = new Map(messages.map((m) => [m.authorId, m.authorName]));
   const distinctAuthors = new Set(items.flatMap((i) => i.author_ids));
   let conflicts: { item_a: number; item_b: number; summary: string }[] = [];
+  // "failed" must not look like "no conflicts": the team is told the check didn't run.
+  let conflictCheck: "done" | "not_needed" | "failed" = "not_needed";
   if (items.length >= 2 && distinctAuthors.size >= 2) {
     try {
       const ai2 = await generateJson({
@@ -104,8 +106,10 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
         thinking: "low",
       });
       conflicts = sanitizeConflicts(ai2, items);
+      conflictCheck = "done";
     } catch (err) {
       if (!(err instanceof AiError)) throw err; // a change list without conflict check is still useful
+      conflictCheck = "failed";
     }
   }
 
@@ -164,6 +168,14 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     metadata: Object.fromEntries(items.map((_, i) => [itemKey(i), JSON.stringify({ s: "suggested" })])),
   });
   check("setChangeListCard", await db.from("change_lists").update({ card_message_id: cardId }).eq("id", list.id));
+  if (conflictCheck === "failed") {
+    await sendGroupMessage({
+      fromUserId: BOT_USER_ID,
+      channelId: project.internal_channel_id,
+      messageType: "RC:TxtMsg",
+      content: { content: `I couldn't check this change list for conflicting requests (the AI was busy). Review it for contradictions, or press Summarise feedback again.` },
+    });
+  }
 
   // FR-12: conflict cards (client room), approver decides
   for (const c of conflicts) {
@@ -202,7 +214,7 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     check("setConflictCard", await db.from("drift_alerts").update({ card_message_id: conflictMsg }).eq("id", alert.id));
   }
 
-  return { changeListId: list.id, items: items.length, conflicts: conflicts.length, messages: messages.length };
+  return { changeListId: list.id, items: items.length, conflicts: conflicts.length, conflictCheck, messages: messages.length };
 }
 
 /** Updates one item's chip on the change list card (FR-9), in place for everyone. */
