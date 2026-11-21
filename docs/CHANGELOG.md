@@ -2,6 +2,12 @@
 
 ## Auth update: email + password (2026-11-21)
 
+- **Email switched off for now (EMAIL_ENABLED flag):** while email is off, "Email me a code instead" is
+  hidden and "Forgot password?" shows "Contact support… to reset your password" (address from
+  SUPPORT_EMAIL). Set EMAIL_ENABLED=true in Vercel to bring both back (no code change).
+- **Owner reset tool:** `pnpm reset-link <email>` prints a one-time link (no email sent) that opens
+  "Choose a new password". Tested: unknown email refused, link works once, new password signs in.
+
 - Agency sign-up and sign-in now use **email + password**. New accounts are signed in immediately
   (Supabase "Confirm email" is off), then go to onboarding.
 - Secondary options: **Email me a code instead** and **Forgot password?** (reset link → choose a new

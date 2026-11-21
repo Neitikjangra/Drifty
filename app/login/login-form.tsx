@@ -58,7 +58,7 @@ function safeNext(next: string | null) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
 }
 
-export function LoginForm() {
+export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolean; supportEmail: string | null }) {
   const params = useSearchParams();
   const router = useRouter();
   const next = safeNext(params.get("next"));
@@ -122,7 +122,7 @@ export function LoginForm() {
     signin: "Welcome back. Sign in with your email and password.",
     signup: "Free for 2 active clients. You'll be signed in straight away.",
     code: "We'll email you a one-time code. Handy if you signed up with a code before.",
-    forgot: "We'll email you a link to choose a new password.",
+    forgot: emailEnabled ? "We'll email you a link to choose a new password." : "We'll help you get back in.",
   }[mode];
 
   return (
@@ -200,6 +200,7 @@ export function LoginForm() {
                 {busy ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create account" : "Sign in"}
               </Button>
             </form>
+            {emailEnabled && (
             <button
               type="button"
               onClick={() => switchTo("code")}
@@ -207,11 +208,17 @@ export function LoginForm() {
             >
               Email me a code instead
             </button>
+            )}
           </>
         )}
 
-        {mode === "code" && <CodeFlow email={email} setEmail={setEmail} next={next} onBack={() => switchTo("signin")} />}
-        {mode === "forgot" && <ForgotFlow email={email} setEmail={setEmail} onBack={() => switchTo("signin")} />}
+        {mode === "code" && emailEnabled && <CodeFlow email={email} setEmail={setEmail} next={next} onBack={() => switchTo("signin")} />}
+        {mode === "forgot" &&
+          (emailEnabled ? (
+            <ForgotFlow email={email} setEmail={setEmail} onBack={() => switchTo("signin")} />
+          ) : (
+            <ContactSupport supportEmail={supportEmail} onBack={() => switchTo("signin")} />
+          ))}
       </CardContent>
     </Card>
   );
@@ -351,6 +358,30 @@ function ForgotFlow({ email, setEmail, onBack }: { email: string; setEmail: (v: 
           </Button>
         </form>
       )}
+      <Button variant="ghost" className="w-full" onClick={onBack}>
+        Back to sign in
+      </Button>
+    </div>
+  );
+}
+
+/** Shown instead of the emailed reset while EMAIL_ENABLED is off. */
+function ContactSupport({ supportEmail, onBack }: { supportEmail: string | null; onBack: () => void }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm" role="status">
+        {supportEmail ? (
+          <>
+            Contact{" "}
+            <a className="font-medium underline underline-offset-4" href={`mailto:${supportEmail}?subject=Reset%20my%20Drifty%20password`}>
+              {supportEmail}
+            </a>{" "}
+            to reset your password. Send it from the email address you sign in with.
+          </>
+        ) : (
+          "Contact Drifty support to reset your password, from the email address you sign in with."
+        )}
+      </p>
       <Button variant="ghost" className="w-full" onClick={onBack}>
         Back to sign in
       </Button>
