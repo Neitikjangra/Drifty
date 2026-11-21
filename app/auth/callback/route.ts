@@ -12,7 +12,7 @@ function safeNext(next: string | null): string {
  * PKCE (`?code=`) and email-template token hash (`?token_hash=&type=`).
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const next = safeNext(searchParams.get("next"));
   const supabase = await supabaseServer();
 
@@ -37,5 +37,7 @@ export async function GET(request: NextRequest) {
   // Log only the method and error code, never the email or token.
   if (!ok) console.warn(`[auth/callback] sign-in link failed: ${reason}`);
 
-  return NextResponse.redirect(new URL(ok ? next : "/login?error=link", origin));
+  // Relative redirect: stays on the host the browser used. Session cookies set above via
+  // cookies() are attached to this response by Next.
+  return new NextResponse(null, { status: 307, headers: { Location: ok ? next : "/login?error=link" } });
 }

@@ -1,8 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/db/supabase-server";
 
-export async function POST(request: NextRequest) {
+/** Relative redirect: always stays on the host the browser used (no server-host guessing). */
+const seeOther = (path: string) => new Response(null, { status: 303, headers: { Location: path } });
+
+export async function POST() {
   const supabase = await supabaseServer();
   await supabase.auth.signOut();
-  return NextResponse.redirect(new URL("/login", request.nextUrl.origin), { status: 303 });
+  return seeOther("/login");
 }

@@ -301,7 +301,7 @@ These are the minimum bars for letting a paying agency put real client work in D
 | Area | Requirement |
 | --- | --- |
 | Secrets | App Secret, service-role key and Gemini API key are server-only; none in the client bundle or git history; `.env.example` committed with blanks |
-| Auth | Supabase magic link for agency users. Client invites are personal, reusable links for one invited person: 30-day expiry, work on any device, revocable by the AM (revoking also removes room access), re-issuable ("Copy link again", "New link"). Link tokens are 256-bit HMACs of the invite id, stored only as a keyed hash. On join the client gets a secure, httpOnly, 30-day session cookie (renewed on each visit) so return visits go straight to the room |
+| Auth | Agency users: email + password (Supabase; "Confirm email" off, so sign-up logs in immediately), with "Email me a code instead" (one-time code) and "Forgot password" (reset email → /auth/reset). Client invites are personal, reusable links for one invited person: 30-day expiry, work on any device, revocable by the AM (revoking also removes room access), re-issuable ("Copy link again", "New link"). Link tokens are 256-bit HMACs of the invite id, stored only as a keyed hash. On join the client gets a secure, httpOnly, 30-day session cookie (renewed on each visit) so return visits go straight to the room |
 | Authorisation | RLS on every table by workspace and project; every API route re-checks the role (approver-only actions verified server-side) |
 | Tenant isolation | A user only gets Nexconn tokens and channel membership for projects they belong to; internal rooms never include guests |
 | Webhook | Verify Nexconn's signature, reject replays, deduplicate on `nexconn_msg_id`, and answer within 1 second |

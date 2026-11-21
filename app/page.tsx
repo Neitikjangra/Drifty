@@ -11,7 +11,7 @@ export default function Home() {
         change list, catches versions that miss a change, and records a tamper-proof approval.
       </p>
       <div>
-        <Link href="/login" className={buttonVariants()}>
+        <Link href="/login?mode=signup" className={buttonVariants()}>
           Start free
         </Link>
       </div>

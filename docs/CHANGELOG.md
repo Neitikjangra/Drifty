@@ -1,5 +1,17 @@
 # Changelog
 
+## Auth update: email + password (2026-11-21)
+
+- Agency sign-up and sign-in now use **email + password**. New accounts are signed in immediately
+  (Supabase "Confirm email" is off), then go to onboarding.
+- Secondary options: **Email me a code instead** and **Forgot password?** (reset link → choose a new
+  password at `/auth/reset`). Both need working email (SMTP).
+- Clear messages for wrong password, existing account, short password, and email-service failure.
+- Sign-out and sign-in callback redirects are now relative, so they always stay on the host you used.
+- Tested locally with new non-owner addresses: sign up → onboarding → projects, sign out, password
+  sign-in, wrong password, duplicate sign-up. Code and reset emails still fail at the SMTP step
+  ("Error sending … email" from Supabase).
+
 ## Round 2: deliverables, versions, approvals (FR-4, FR-5, FR-6, FR-10, FR-13 core) (2026-11-21)
 
 **Built**
