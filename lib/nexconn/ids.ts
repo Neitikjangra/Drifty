@@ -25,4 +25,5 @@ export const MSG = {
   receipt: "drifty:receipt",
   changelist: "drifty:changelist",
   conflict: "drifty:conflict",
+  drift: "drifty:drift",
 } as const;

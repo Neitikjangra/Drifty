@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { routeProjectAccess } from "@/lib/access";
 import { canUploadVersions } from "@/lib/auth/permissions";
@@ -13,6 +14,9 @@ import { postDeliverableCard, setCardStatus } from "@/lib/deliverables/cards-ser
 import { nextVersion } from "@/lib/deliverables/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { inspectUpload, UploadError } from "@/lib/storage";
+import { createVersionAlert, driftItems, lastSentVersion, runDriftCheck, supersedeOpenAlerts } from "@/lib/drift/check";
+
+export const maxDuration = 60; // the AI-3 drift check runs after the response
 
 const body = z.object({
   copy: z.string().max(5000).default(""),
@@ -20,8 +24,10 @@ const body = z.object({
 });
 
 /**
- * POST /api/deliverables/:id/versions: uploads vN+1 (FR-10). Posts the new card and marks
- * the previous card "Superseded" in place. Owner, AM or creative.
+ * POST /api/deliverables/:id/versions: uploads vN+1 (FR-10). Owner, AM or creative.
+ * - Confirmed changes exist for the last version the client saw → the version is held
+ *   (status draft, nothing in the client room) and AI-3 runs the drift check (FR-11).
+ * - Otherwise → posts the new card and marks the previous card "Superseded" in place.
  */
 export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[id]/versions">) {
   const { id } = await ctx.params;
@@ -40,7 +46,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
     if (d.status === "approved") return jsonError(409, "This deliverable is already approved.");
 
     const asset = await inspectUpload(d.project_id, input.assetPath);
-    const previous = await getVersionByNumber(d.id, d.current_version);
+    const lastSent = (await lastSentVersion(d.id)) ?? (await getVersionByNumber(d.id, d.current_version));
+    const toCheck = lastSent ? await driftItems(d.id, lastSent) : [];
     const next = nextVersion(d.current_version);
     const v = await insertVersion({
       deliverable_id: d.id,
@@ -51,6 +58,22 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
       copy_text: input.copy,
       created_by: access.userId,
     });
+    await supersedeOpenAlerts(access.project, d.id);
+
+    if (lastSent && toCheck.length > 0) {
+      await updateDeliverable(d.id, { current_version: next.number, status: "draft" });
+      const alert = await createVersionAlert(d, lastSent, v, toCheck);
+      const project = access.project;
+      after(async () => {
+        try {
+          await runDriftCheck(project, d, alert, lastSent, v, toCheck);
+        } catch (err) {
+          console.error("[drift] check failed", err instanceof Error ? err.name : "error");
+        }
+      });
+      return ok({ versionId: v.id, version: next.number, held: true, checking: toCheck.length, alertId: alert.id }, 201);
+    }
+
     let messageId: string;
     try {
       messageId = await postDeliverableCard(access.project, d, v);
@@ -61,9 +84,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
     await Promise.all([
       setVersionCard(v.id, messageId),
       updateDeliverable(d.id, { current_version: next.number, status: next.status }),
-      previous ? setCardStatus(access.project, previous, "superseded").catch(() => {}) : Promise.resolve(),
+      lastSent ? setCardStatus(access.project, lastSent, "superseded").catch(() => {}) : Promise.resolve(),
     ]);
-    return ok({ versionId: v.id, version: next.number }, 201);
+    return ok({ versionId: v.id, version: next.number, held: false }, 201);
   } catch (err) {
     if (err instanceof UploadError) return jsonError(400, err.message);
     return handleRouteError("deliverables/versions", err);

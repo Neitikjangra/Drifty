@@ -48,6 +48,8 @@ export function canAct(
   action: "approve" | "request_changes",
   v: { isCurrent: boolean; deliverableStatus: DeliverableStatus },
 ): { ok: true } | { ok: false; reason: string } {
+  // A held version (drift check) isn't in the client room yet.
+  if (v.deliverableStatus === "draft") return { ok: false, reason: "The team is preparing a new version. You'll see it here soon." };
   if (!v.isCurrent) return { ok: false, reason: "A newer version exists. Review the latest card." };
   if (v.deliverableStatus === "approved") return { ok: false, reason: "This version is already approved." };
   if (action === "request_changes" && v.deliverableStatus === "changes_requested") {

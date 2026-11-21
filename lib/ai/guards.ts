@@ -1,4 +1,4 @@
-import type { ChangeListOutput, ConflictsOutput } from "./schemas";
+import type { ChangeListOutput, ConflictsOutput, DriftOutput, DriftVerdict } from "./schemas";
 
 /** PRD section 6 guards, as pure functions (unit-tested). */
 
@@ -51,5 +51,27 @@ export function sanitizeConflicts(out: ConflictsOutput, items: ChangeListOutput[
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+}
+
+/**
+ * Cleans AI-3 output: exactly one result per item we asked about (unknown ids dropped,
+ * missing ones become needs_check). Without both images, visual/layout items can only be
+ * needs_check (SRS FR-11: images are checked by a vision model or by a person).
+ */
+export function sanitizeDrift(
+  out: DriftOutput | null,
+  items: { id: string; type: string }[],
+  imagesCompared: boolean,
+): { itemId: string; verdict: DriftVerdict; note: string }[] {
+  const byId = new Map<string, DriftOutput["results"][number]>();
+  for (const r of out?.results ?? []) if (!byId.has(r.item_id)) byId.set(r.item_id, r);
+  return items.map((it) => {
+    const r = byId.get(it.id);
+    let verdict: DriftVerdict = r?.verdict ?? "needs_check";
+    const visual = it.type === "visual" || it.type === "layout";
+    if (visual && !imagesCompared && verdict !== "needs_check") verdict = "needs_check";
+    const note = r ? r.note.trim().slice(0, 300) : out ? "The AI didn't report on this one: check it by eye." : "AI check unavailable: check it by eye.";
+    return { itemId: it.id, verdict, note };
   });
 }

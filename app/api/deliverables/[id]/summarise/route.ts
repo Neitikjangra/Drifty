@@ -21,6 +21,7 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/deliverables/[
       return jsonError(403, "Only owners and account managers can summarise feedback.");
     }
     if (d.status === "approved") return jsonError(409, "This deliverable is already approved.");
+    if (d.status === "draft") return jsonError(409, `v${d.current_version} is waiting for the drift check. Send it to the client first.`);
     const out = await summarise(res.access.project, d, res.access.userId);
     return ok(out, 201);
   } catch (err) {

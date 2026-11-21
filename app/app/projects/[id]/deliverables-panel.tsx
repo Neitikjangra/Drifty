@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,19 @@ export interface DeliverableRow {
   dueDate: string | null;
   copy: string;
   approval: { version: number; by: string; at: string } | null;
+  /** Version drift check for the current (held) version, if any (FR-11). */
+  drift: {
+    alertId: string;
+    state: "checking" | "ready" | "sent" | "back" | "superseded";
+    toVersion: number;
+    checking: number;
+    counts: { done: number; missing: number; reversed: number; needs_check: number } | null;
+    sendLabel: string;
+  } | null;
 }
 
 const LABEL: Record<DeliverableRow["status"], string> = {
-  draft: "Draft",
+  draft: "Held for check",
   in_review: "In review",
   changes_requested: "Changes requested",
   approved: "Approved",
@@ -199,6 +208,25 @@ function DeliverableItem({
   canSummarise: boolean;
 }) {
   const router = useRouter();
+  const held = item.status === "draft" && item.drift;
+  // While AI-3 runs, refresh every few seconds so the result shows up by itself.
+  useEffect(() => {
+    if (!(held && item.drift?.state === "checking")) return;
+    const t = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(t);
+  }, [held, item.drift?.state, router]);
+  const [decision, setDecision] = useState<{ busy: "" | "send" | "back"; error: string }>({ busy: "", error: "" });
+  async function decide(action: "send" | "back") {
+    if (!item.drift) return;
+    setDecision({ busy: action, error: "" });
+    try {
+      await apiJson(`/api/drift/${item.drift.alertId}`, { body: { action } });
+      setDecision({ busy: "", error: "" });
+      router.refresh();
+    } catch (err) {
+      setDecision({ busy: "", error: err instanceof Error ? err.message : "Couldn't save that, try again." });
+    }
+  }
   const [summary, setSummary] = useState<{ busy: boolean; text: string; error: boolean }>({ busy: false, text: "", error: false });
 
   async function summarise() {
@@ -264,7 +292,8 @@ function DeliverableItem({
           {new Date(item.approval.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </p>
       )}
-      {canSummarise && item.status !== "approved" && (
+      {item.status === "draft" && item.drift && <DriftStatus drift={item.drift} canDecide={canSummarise} decision={decision} onDecide={decide} />}
+      {canSummarise && item.status !== "approved" && item.status !== "draft" && (
         <div className="space-y-1">
           <Button size="sm" onClick={summarise} disabled={summary.busy}>
             {summary.busy ? "Summarising… (up to 15 s)" : "Summarise feedback"}
@@ -311,5 +340,57 @@ function DeliverableItem({
         </form>
       )}
     </li>
+  );
+}
+
+function DriftStatus({
+  drift,
+  canDecide,
+  decision,
+  onDecide,
+}: {
+  drift: NonNullable<DeliverableRow["drift"]>;
+  canDecide: boolean;
+  decision: { busy: "" | "send" | "back"; error: string };
+  onDecide: (a: "send" | "back") => void;
+}) {
+  if (drift.state === "checking") {
+    return (
+      <p className="text-muted-foreground text-xs" role="status">
+        Checking v{drift.toVersion} against {drift.checking} confirmed change{drift.checking === 1 ? "" : "s"}… The client won&apos;t see it until you decide.
+      </p>
+    );
+  }
+  if (drift.state === "back") {
+    return <p className="text-xs text-amber-800">Sent back to the creative. Upload v{drift.toVersion + 1} when it&apos;s ready.</p>;
+  }
+  if (drift.state !== "ready") return null;
+  const c = drift.counts;
+  const summary = c
+    ? [c.done && `${c.done} done`, c.missing && `${c.missing} missing`, c.reversed && `${c.reversed} reversed`, c.needs_check && `${c.needs_check} to check`]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  return (
+    <div className="space-y-2 rounded-md bg-slate-50 p-2">
+      <p className="text-xs">
+        <span className="font-medium">Drift check v{drift.toVersion}:</span> {summary}. Details in the Internal room.
+      </p>
+      {canDecide && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => onDecide("send")} disabled={decision.busy !== ""}>
+            {decision.busy === "send" ? "Sending…" : drift.sendLabel}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onDecide("back")} disabled={decision.busy !== ""}>
+            {decision.busy === "back" ? "Sending…" : "Back to creative"}
+          </Button>
+        </div>
+      )}
+      {decision.error && (
+        <p className="text-xs text-red-600" role="alert">
+          {decision.error}
+        </p>
+      )}
+    </div>
   );
 }

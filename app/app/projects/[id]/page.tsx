@@ -12,6 +12,10 @@ import { PeoplePanel, type PeopleData } from "./people-panel";
 import { DeliverablesPanel, type DeliverableRow } from "./deliverables-panel";
 import { listDeliverables } from "@/lib/db/deliverables";
 import { canUploadVersions } from "@/lib/auth/permissions";
+import { latestVersionAlerts, type VersionAlert } from "@/lib/drift/check";
+import { loadDashboard } from "@/lib/dashboard/load";
+import { ProjectDashboard } from "./project-dashboard";
+import { driftCounts, sendLabel } from "@/lib/drift/rules";
 
 /** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
 function buildPeople(guests: ProjectGuest[], invites: Invite[]): PeopleData {
@@ -48,6 +52,19 @@ function buildPeople(guests: ProjectGuest[], invites: Invite[]): PeopleData {
   return { members, pending, past };
 }
 
+function driftRow(a: VersionAlert | undefined, current: number): DeliverableRow["drift"] {
+  if (!a || a.detail.toVersion !== current) return null;
+  const results = a.detail.results ?? [];
+  return {
+    alertId: a.id,
+    state: a.resolved_at ? (a.detail.decision ?? "sent") : a.detail.state,
+    toVersion: a.detail.toVersion,
+    checking: a.detail.itemIds.length,
+    counts: results.length ? driftCounts(results) : null,
+    sendLabel: sendLabel(results, a.detail.toVersion),
+  };
+}
+
 export const metadata: Metadata = { title: "Project · Drifty" };
 
 export default function ProjectPage({ params }: PageProps<"/app/projects/[id]">) {
@@ -74,6 +91,10 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
     canManage ? listInvites(project.id) : [],
     listDeliverables(project.id),
   ]);
+  const [alerts, dashboard] = await Promise.all([
+    latestVersionAlerts(deliverables.map((d) => d.id)),
+    loadDashboard(deliverables, project.rounds_included),
+  ]);
   const nameOf = new Map(guests.map((g) => [g.user_id, g.display_name]));
   const deliverableRows: DeliverableRow[] = deliverables.map((d) => {
     const current = d.versions.find((v) => v.number === d.current_version);
@@ -87,6 +108,7 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
       dueDate: d.due_date,
       copy: current?.copy_text ?? "",
       approval: appr ? { version: apprVersion, by: nameOf.get(appr.approver_id) ?? "Approver", at: appr.approved_at } : null,
+      drift: driftRow(alerts.get(d.id), d.current_version),
     };
   });
   const appKey = process.env.NEXT_PUBLIC_NEXCONN_APP_KEY ?? "";
@@ -110,6 +132,8 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
           <h1 className="truncate text-2xl font-semibold tracking-tight">{project.client_name}</h1>
         </div>
       </div>
+
+      <ProjectDashboard projectId={project.id} data={dashboard} canManage={canManage} />
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row">
         {tabs.length && appKey ? (

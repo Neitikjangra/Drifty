@@ -44,3 +44,10 @@ export async function signedReadUrl(path: string, seconds = 300): Promise<string
   if (error || !data) throw new UploadError("Couldn't load the file.");
   return data.signedUrl;
 }
+
+/** Reads a stored draft (server-side, e.g. for the AI-3 image comparison). */
+export async function downloadAsset(path: string): Promise<Uint8Array> {
+  const { data, error } = await supabaseAdmin().storage.from(BUCKET).download(path);
+  if (error || !data) throw new UploadError("Couldn't load the file.");
+  return new Uint8Array(await data.arrayBuffer());
+}

@@ -4,10 +4,10 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 3 built, awaiting "approved"** (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
+- Round: **Round 4 built, awaiting "approved"** (Round 3 approved 2026-11-22) (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
-- Last updated: 2026-11-21
+- Last updated: 2026-11-22
 
 ## Section 0: setup
 - [x] Read CLAUDE.md, PRD, SRS, MASTER_PROMPT
@@ -71,17 +71,22 @@ sign-in link for a test agency user (no email sent).
 - [x] AI-1 change list card; AM confirm/edit/reject; Send brief
 - [x] AI-2 conflict card for approver; choice recorded
 - [x] Checks (40 unit, E2E 67+36+34), changelog, PRD section 6 updated
-- [ ] Deployed + webhook configured in Nexconn Console (human) + user Try-it → "approved"
+- [x] Deployed; approved 2026-11-22 (webhook in Nexconn Console still a human task)
 
 **Round 3 lessons:** @google/genai must use `apiVersion: "v1beta"` (v1 404s on preview models and
 JSON-schema output); its internal retries hide overload for minutes, so retries are ours (1 attempt,
 25 s timeout, 60 s circuit breaker, optional AI_FALLBACK_MODEL).
 
 ## Round 4: FR-11, FR-13 full, FR-14
-- [ ] AI-3 drift check card on new version; AM actions
-- [ ] Ledger page + CSV export
-- [ ] Project dashboard
-- [ ] Checks, deploy, changelog, report
+- [x] AI-3 drift check card on new version (held as `draft`); AM send / back to creative
+- [x] Ledger page + CSV export (filters, formula-safe, BOM)
+- [x] Project dashboard (status, open items, waiting on, rounds used + rounds included editor)
+- [x] Checks (55 unit, E2E 67+36+33+38), changelog, PRD section 6 updated
+- [ ] Deployed + user Try-it → "approved"
+
+**Round 4 lessons:** the drift check compares against the last version the *client saw* (card id
+set), not the previous number, so a sent-back v2 doesn't reset the list for v3. Clients' asset
+access hides held/skipped versions, but not a just-posted card (its id is saved a moment later).
 
 ## Round 5: production hardening + launch surface
 - [ ] Landing, pricing, FAQ, privacy/terms (legal text from team)

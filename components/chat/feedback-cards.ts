@@ -12,7 +12,7 @@ import { getCardActions, liveMetadata, METADATA_EVENT, unwrap, type MetadataEven
 export const CHANGELIST_TAG = "drifty-changelist";
 export const CONFLICT_TAG = "drifty-conflict";
 
-const BASE = `
+export const BASE = `
 :host{display:block;max-width:340px;font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a}
 .card{border:1px solid #e2e8f0;border-radius:12px;background:#fff;overflow:hidden}
 .hd{padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:13px}
@@ -37,19 +37,26 @@ input,textarea{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-
 .ok{font-size:12px;color:#166534}
 `;
 
-const STATUS_CHIP: Record<string, [string, string, string]> = {
+export const STATUS_CHIP: Record<string, [string, string, string]> = {
   suggested: ["Suggested", "#fef3c7", "#92400e"],
   confirmed: ["Confirmed", "#dcfce7", "#166534"],
   rejected: ["Rejected", "#f1f5f9", "#64748b"],
+  // Round 4 drift check verdicts
+  done: ["Done", "#dcfce7", "#166534"],
+  missing: ["Missing", "#fee2e2", "#991b1b"],
+  reversed: ["Reversed", "#fee2e2", "#991b1b"],
+  needs_check: ["Check by eye", "#e0e7ff", "#3730a3"],
 };
+/** After a drift check the item is the version's business: no confirm/reject buttons. */
+const CHECKED = new Set(["done", "missing", "reversed", "needs_check"]);
 
-function el(tag: string, cls: string, text?: string) {
+export function el(tag: string, cls: string, text?: string) {
   const n = document.createElement(tag);
   n.className = cls;
   if (text !== undefined) n.textContent = text;
   return n;
 }
-function btn(label: string, cls: string, disabled: boolean, onClick: () => void) {
+export function btn(label: string, cls: string, disabled: boolean, onClick: () => void) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = cls;
@@ -63,7 +70,7 @@ function btn(label: string, cls: string, disabled: boolean, onClick: () => void)
 }
 
 /** Shared base: message parsing, live metadata, guarded re-render. */
-abstract class LiveCard<T> extends HTMLElement {
+export abstract class LiveCard<T> extends HTMLElement {
   protected msg: SdkMessageLike | null = null;
   protected data: T | null = null;
   protected meta: Record<string, string> = {};
@@ -200,7 +207,7 @@ export function defineChangeListElement(): CustomElementConstructor {
         }
         row.append(el("div", "muted", `— ${it.author}`));
         if (it.source) row.append(el("div", "src", `“${it.source}”`));
-        if (canManage && this.editing !== i) {
+        if (canManage && this.editing !== i && !CHECKED.has(status)) {
           const b = el("div", "btns");
           if (status !== "confirmed") {
             b.append(

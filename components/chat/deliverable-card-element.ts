@@ -35,6 +35,8 @@ export interface CardActions {
   changeItem(itemId: string, action: "confirm" | "reject" | "edit", text?: string): Promise<void>;
   sendBrief(changeListId: string): Promise<void>;
   resolveConflict(conflictId: string, choice: "a" | "b" | "other", text?: string): Promise<void>;
+  /** Owner/AM decision on a held version (FR-11). */
+  decideDrift(alertId: string, action: "send" | "back"): Promise<void>;
 }
 export function getCardActions() {
   return actions;

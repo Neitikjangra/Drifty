@@ -2,6 +2,7 @@
 import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
 import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
 import { CHANGELIST_TAG, CONFLICT_TAG, defineChangeListElement, defineConflictElement } from "./feedback-cards";
+import { defineDriftElement, DRIFT_TAG } from "./drift-card";
 
 export const VOICE_MENU_ID = "drifty.voice";
 export const VOICE_EVENT = "drifty:voice";
@@ -221,6 +222,13 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       isCounted: true,
       digest: () => "[Please choose]",
       component: { tagName: CONFLICT_TAG, elementClass: defineConflictElement() },
+    },
+    {
+      messageType: MSG.drift,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Drift check]",
+      component: { tagName: DRIFT_TAG, elementClass: defineDriftElement() },
     },
     {
       messageType: MSG.receipt,

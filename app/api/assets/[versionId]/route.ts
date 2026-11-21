@@ -17,7 +17,12 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/assets/[version
     if (caller.kind === "anonymous") return jsonError(401, "Please sign in.");
     const v = await getVersion(versionId);
     const d = v ? await getDeliverable(v.deliverable_id) : null;
-    if (!v || !d || !(await projectAccess(d.project_id, caller))) return jsonError(404, "Not found.");
+    const access = v && d ? await projectAccess(d.project_id, caller) : null;
+    if (!v || !d || !access) return jsonError(404, "Not found.");
+    // Clients only see versions posted to their room (a held version is team-only, FR-11).
+    // (Not "no card id yet": a just-posted card loads its image before the id is saved.)
+    const held = !v.card_message_id && (d.status === "draft" || v.number < d.current_version);
+    if (access.kind === "guest" && held) return jsonError(404, "Not found.");
     const url = await signedReadUrl(v.asset_path, 300);
     return NextResponse.redirect(url, { status: 302, headers: { "Cache-Control": "private, max-age=240" } });
   } catch (err) {

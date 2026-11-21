@@ -1,5 +1,51 @@
 # Changelog
 
+## Round 4: drift check, ledger, dashboard (FR-11, FR-13 full, FR-14) (2026-11-22)
+
+**Built**
+- FR-11 **version drift check:** when the team uploads vN+1 and confirmed changes exist, the new
+  version is **held**. It doesn't go to the client room, and clients can't open its file.
+  - AI-3 compares the copy word for word, plus both images (PNG/JPEG/WebP/PDF) by vision, against
+    the confirmed change list. It checks against the last version the client saw, plus anything an
+    earlier check left missing or reversed.
+  - A `drifty:drift` card in the **Internal** room marks each change **Done / Missing / Reversed /
+    Check by eye**, with a short note. The change list card's items update to match.
+  - The AM chooses **Send to client** (labelled "Send to client anyway" if anything isn't done) or
+    **Back to creative**, which posts the gaps for the creative. Each check can be decided only
+    once, and only by an owner or AM, checked on the server.
+  - Uploading again re-checks everything. If the AI can't run, every item becomes "Check by eye":
+    nothing reaches the client unchecked.
+  - The same status and both buttons also appear on the deliverable in the project page.
+- FR-13 **approval ledger:** **Approval ledger** is linked from the project dashboard. It's a
+  read-only table (cards on phones) with search plus filters for deliverable, approver and dates
+  (India time). **Export CSV** downloads exactly what's filtered: UTF-8 with BOM for Hindi in
+  Excel, IST + UTC times, approved copy, asset SHA-256, ids, and protection against spreadsheet
+  formulas. Agency members only.
+- FR-14 **project dashboard** at the top of every project: deliverables by status, open change
+  items, waiting on client vs team, revision rounds used against **rounds included** (editable by
+  the owner/AM), and a by-deliverable breakdown.
+
+**Try it**
+1. On a project with a v1 card, have the client ask for two copy changes (e.g. CTA "Buy now" →
+   "Shop the sale", and add "Free delivery"). Press **Summarise feedback** and confirm both.
+2. **Upload v2** that only adds "Free delivery". The deliverable shows **Held for check**, and in
+   **Internal** a drift card lists the CTA as **Missing**. The client room shows nothing new.
+3. Press **Back to creative**. Then upload v3 with both changes: the new card shows both **Done**.
+   Press **Send v3 to client**.
+4. The approver approves v3. Open **Approval ledger → Export CSV**.
+
+**Checks:** lint, typecheck, 55 unit tests, E2E Round 1 (67), Round 2 (36), Round 4 (38, real
+Gemini + Nexconn), Round 3 (32 of 33: only the 15 s speed target missed, see below), and a
+browser check at phone width of the dashboard, both drift cards and the ledger (filters, no
+console errors).
+
+**Known issues**
+- The Gemini key is still out of quota on gemini-3.8-flash and gemini-3-flash-preview, so AI runs
+  on the slow backup gemini-3.5-flash: about 20–45 s per change list and about 20–25 s per drift
+  check. Summarise now fits AI-1 and AI-2 into its 60 s limit; if AI-2 runs out of time, the team
+  is told the conflict check didn't run.
+- GIF drafts and files over 7 MB are compared by copy only; visual items become "Check by eye".
+
 ## Round 3: voice, AI change list, conflict alert (FR-7, FR-8, FR-9, FR-12) (2026-11-21)
 
 **Built**

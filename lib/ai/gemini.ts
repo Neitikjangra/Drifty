@@ -95,16 +95,32 @@ export async function generateJson<S extends z.ZodType>(opts: {
   jsonSchema: unknown;
   zod: S;
   thinking: "low" | "medium";
+  /** Extra inputs after the prompt (e.g. images for AI-3). */
+  media?: { mimeType: string; data: Uint8Array; label: string }[];
+  /** ms for the main model when a fallback exists / for the last model tried. */
+  timeouts?: { first: number; last: number };
 }): Promise<z.infer<S>> {
+  const t = opts.timeouts ?? { first: 8_000, last: 35_000 };
+  const contents = opts.media?.length
+    ? [
+        {
+          role: "user",
+          parts: [
+            { text: opts.prompt },
+            ...opts.media.flatMap((m) => [{ text: m.label }, { inlineData: { mimeType: m.mimeType, data: Buffer.from(m.data).toString("base64") } }]),
+          ],
+        },
+      ]
+    : opts.prompt;
   const started = Date.now();
   let lastProblem = "";
   let quota = false;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await onAvailableModel(opts.task, (model, hasFallback) =>
-        ai(hasFallback ? 8_000 : 35_000).models.generateContent({
+        ai(hasFallback ? t.first : t.last).models.generateContent({
           model,
-          contents: opts.prompt,
+          contents,
           config: {
             systemInstruction: opts.system,
             responseMimeType: "application/json",

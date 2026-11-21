@@ -234,11 +234,13 @@ change_items(version_id, text, type text, author_ids uuid[], source_msg_ids text
 drift_alerts(deliverable_id, version_id, kind text ('feedback'|'version'|'scope'|'approval'),
              detail jsonb, card_message_id, resolved_by, resolved_at)
         -- R3: kind 'feedback' = AI-2 conflict (detail: itemA, itemB, summary, choice)
+        -- R4: kind 'version' = AI-3 drift check (detail: fromVersionId, fromVersion, toVersionId,
+        --     toVersion, itemIds, state checking|ready, aiChecked, results, decision sent|back|superseded)
 approvals(version_id, approver_id, approved_at, copy_snapshot, asset_sha256)  -- insert only
 jobs(kind, payload jsonb, status, attempts int, last_error)
 ```
 
-**Status values.** Deliverable: `draft, in_review, changes_requested, approved`. Card (message metadata) adds `superseded` for older versions. Change item: `suggested, confirmed, rejected, done, missing, reversed, needs_check`.
+**Status values.** Deliverable: `draft, in_review, changes_requested, approved` (R4: `draft` = a new version held for the drift check, not yet in the client room). Card (message metadata) adds `superseded` for older versions. Change item: `suggested, confirmed, rejected, done, missing, reversed, needs_check`.
 
 ### Custom Nexconn message types (content JSON)
 
@@ -247,7 +249,7 @@ jobs(kind, payload jsonb, status, attempts int, last_error)
 | `drifty:deliverable` | Client room | deliverableId, versionId, version, title, imageUrl (access-checked `/api/assets/:versionId`), copy, dueDate, status, assetKind (image/pdf, added R2) | Approve vX, Request changes (approver only) |
 | `drifty:changelist` | Internal room | deliverableId, versionId, items\[{id, text, type, author, sourceMsgId, status}\] (R3: live per-item status/text in metadata key `i<position>` = `{s,t}`) | Confirm / Edit / Reject per item; Send brief (AM) |
 | `drifty:conflict` | Client room | deliverableId, optionA{text, author}, optionB{text, author} | Choose A / Choose B / Other (approver) |
-| `drifty:drift` | Internal room | deliverableId, fromVersion, toVersion, results\[{itemId, verdict, note}\] | Back to creative / Send to client anyway (AM) |
+| `drifty:drift` | Internal room | deliverableId, fromVersion, toVersion, results\[{itemId, verdict, note}\] (R4 adds: alertId, title, toVersionId, aiChecked, per-result text/type; metadata `status` open/sent/back/superseded, `by`, `at`) | Back to creative / Send to client anyway (AM) |
 | `drifty:receipt` | Client room | versionId, approver, approvedAt | None |
 
 Status changes are written through message extensions/metadata from the server only. Clients never write status directly.
@@ -287,7 +289,8 @@ Status changes are written through message extensions/metadata from the server o
 | `POST /api/conflicts/:id/resolve` | Approver's choice |
 | `POST /api/changelists/:id/brief` | Post the confirmed items as the creative's brief in the internal room (R3) |
 | `POST /api/voice`, `GET /api/voice/:id` | Upload a recorded voice note and post it to the room; access-checked playback (R3: ChatUI Web has no recorder) |
-| `GET /api/projects/:id/ledger.csv` | Ledger export |
+| `GET /api/projects/:id/ledger.csv` | Ledger export (R4: same filters as the page: deliverable, approver, from, to, q) |
+| `POST /api/drift/:id` | AM decision on a held version: `send` (post to client) or `back` (to the creative) (R4) |
 
 ### Screens
 

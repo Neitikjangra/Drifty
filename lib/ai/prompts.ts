@@ -34,3 +34,36 @@ export function ai2Prompt(items: ChangeListOutput["items"], names: Map<string, s
     ...items.map((it, i) => `${i}: ${it.text} — ${it.author_ids.map((a) => names.get(a) ?? a).join(", ")} (author ids: ${it.author_ids.join(", ")})`),
   ].join("\n");
 }
+
+/** AI-3 system prompt (PRD section 6 + SRS FR-11). */
+export const AI3_SYSTEM =
+  "You check whether a new version of a creative deliverable carries out the change requests the agency confirmed. " +
+  "For each request give one verdict: 'done' (clearly carried out), 'missing' (not carried out), 'reversed' (the new " +
+  "version goes against it, or undoes something the old version already had), or 'needs_check' (you can't tell for sure). " +
+  "Compare copy text directly, word for word. For visual or layout requests use 'needs_check' unless the change is clearly " +
+  "visible when you compare the two images. If images aren't provided, visual and layout requests are 'needs_check'. " +
+  "Never guess 'done'. Return exactly one result per request, using the ids given.";
+
+export function ai3Prompt(input: {
+  title: string;
+  fromVersion: number;
+  toVersion: number;
+  oldCopy: string;
+  newCopy: string;
+  items: { id: string; text: string; type: string }[];
+  images: "both" | "none";
+}): string {
+  return [
+    `Deliverable: ${input.title}. Old version: v${input.fromVersion}. New version: v${input.toVersion}.`,
+    "",
+    `Old copy (v${input.fromVersion}): ${input.oldCopy || "(none)"}`,
+    `New copy (v${input.toVersion}): ${input.newCopy || "(none)"}`,
+    "",
+    "Confirmed change requests, one JSON object per line:",
+    ...input.items.map((i) => JSON.stringify({ id: i.id, type: i.type, request: i.text })),
+    "",
+    input.images === "both"
+      ? `Two images follow: first the old version (v${input.fromVersion}), then the new version (v${input.toVersion}).`
+      : "No images are available to compare.",
+  ].join("\n");
+}

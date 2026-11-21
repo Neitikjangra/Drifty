@@ -32,7 +32,11 @@ function check<T>(op: string, res: { data: T; error: { code?: string } | null })
  * conflict card (approver decides) in the client room. Runs only when the AM presses
  * "Summarise feedback" (cost control).
  */
+/** The route may run 60 s (maxDuration); AI work must finish with time left to store and post. */
+const AI_BUDGET_MS = 50_000;
+
 export async function summarise(project: Project, d: Deliverable, createdBy: string) {
+  const started = Date.now();
   const v = await getVersionByNumber(d.id, d.current_version);
   if (!v) throw new SummariseError("This deliverable has no version yet.");
   if (!project.client_channel_id || !project.internal_channel_id) throw new SummariseError("This project's rooms aren't ready.");
@@ -85,6 +89,7 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     jsonSchema: changeListJsonSchema,
     zod: changeListSchema,
     thinking: "low",
+    timeouts: { first: 8_000, last: 40_000 },
   });
   const items = sanitizeItems(ai1, messages);
   if (items.length === 0) throw new SummariseError("The AI didn't find any change requests in the client's messages.");
@@ -95,7 +100,9 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
   let conflicts: { item_a: number; item_b: number; summary: string }[] = [];
   // "failed" must not look like "no conflicts": the team is told the check didn't run.
   let conflictCheck: "done" | "not_needed" | "failed" = "not_needed";
-  if (items.length >= 2 && distinctAuthors.size >= 2) {
+  const left = AI_BUDGET_MS - (Date.now() - started);
+  if (items.length >= 2 && distinctAuthors.size >= 2 && left < 5_000) conflictCheck = "failed"; // no time left: say so
+  else if (items.length >= 2 && distinctAuthors.size >= 2) {
     try {
       const ai2 = await generateJson({
         task: "ai2-conflicts",
@@ -104,6 +111,7 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
         jsonSchema: conflictsJsonSchema,
         zod: conflictsSchema,
         thinking: "low",
+        timeouts: { first: Math.min(8_000, left), last: left },
       });
       conflicts = sanitizeConflicts(ai2, items);
       conflictCheck = "done";

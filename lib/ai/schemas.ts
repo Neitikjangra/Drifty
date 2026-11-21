@@ -70,3 +70,38 @@ export const conflictsJsonSchema = {
   },
   required: ["conflicts"],
 } as const;
+
+/** AI-3 output (PRD section 6): one verdict per confirmed item, by the item ids we sent. */
+export const DRIFT_VERDICTS = ["done", "missing", "reversed", "needs_check"] as const;
+export type DriftVerdict = (typeof DRIFT_VERDICTS)[number];
+export const driftSchema = z.object({
+  results: z
+    .array(
+      z.object({
+        item_id: z.string().min(1),
+        verdict: z.enum(DRIFT_VERDICTS),
+        note: z.string().max(300),
+      }),
+    )
+    .max(60),
+});
+export type DriftOutput = z.infer<typeof driftSchema>;
+
+export const driftJsonSchema = {
+  type: "object",
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          item_id: { type: "string", description: "the id of the change request, exactly as given" },
+          verdict: { type: "string", enum: [...DRIFT_VERDICTS] },
+          note: { type: "string", description: "one short sentence: what you saw in the new version" },
+        },
+        required: ["item_id", "verdict", "note"],
+      },
+    },
+  },
+  required: ["results"],
+} as const;

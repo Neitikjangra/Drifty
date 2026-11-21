@@ -108,6 +108,7 @@ export function RoomView({
             sendBrief: (listId) => post(`/api/changelists/${listId}/brief`),
             resolveConflict: (conflictId, choice, text) =>
               post(`/api/conflicts/${conflictId}/resolve`, choice === "other" ? { choice, text } : { choice }),
+            decideDrift: (alertId, action) => post(`/api/drift/${alertId}`, { action }),
           },
         });
         if (cancelled) return;
