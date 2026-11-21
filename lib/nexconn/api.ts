@@ -107,6 +107,8 @@ export interface SendGroupMessageInput {
   content: Record<string, unknown>;
   pushContent?: string;
   metadata?: Record<string, string>;
+  /** Also deliver to the sender's own devices (needed when we send on a user's behalf). */
+  echoToSender?: boolean;
 }
 
 /** POST /v4/group-channel/message/send. Returns the Nexconn message id. */
@@ -120,7 +122,7 @@ export async function sendGroupMessage(input: SendGroupMessageInput): Promise<st
       content: JSON.stringify(input.content),
       ...(input.pushContent ? { pushContent: input.pushContent } : {}),
       shouldPersist: 1,
-      isEchoToSender: 0,
+      isEchoToSender: input.echoToSender ? 1 : 0,
       ...(input.metadata ? { hasMetadata: true, metadata: input.metadata } : {}),
     },
   );

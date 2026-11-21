@@ -1,5 +1,50 @@
 # Changelog
 
+## Round 3: voice, AI change list, conflict alert (FR-7, FR-8, FR-9, FR-12) (2026-11-21)
+
+**Built**
+- FR-7 voice notes: a **mic button** in the room toolbar opens a recorder (up to 60 s, listen back,
+  re-record, send). ChatUI for Web has no recorder, so the note goes to a private `voice` bucket via
+  `/api/voice` and is posted to the room as a standard Nexconn HD voice message from the sender.
+  Playback goes through an access-checked `/api/voice/:id`. Gemini transcribes it (Hindi, English
+  or both) in the background.
+- Message store: `POST /api/nexconn/webhook` verifies the Nexconn signature and App Key, rejects
+  stale timestamps (replays), ignores duplicates, and stores every room message (text, reply, voice,
+  image, file, cards) in `messages`.
+- FR-8 **Summarise feedback** (deliverables panel, owner/AM): AI-1 turns the client messages since
+  the current version into a change list. Each item links to its source message, and items with
+  no real source are dropped. Low-confidence items become questions. A `drifty:changelist` card is
+  posted in the internal room.
+- FR-9: on the card the AM can **Confirm, Edit or Reject** each item. The status updates live for
+  the whole team, written by the server only. **Send brief** posts the confirmed items for the
+  creative.
+- FR-12: AI-2 finds real contradictions between different people. For each one, a
+  `drifty:conflict` card in the client room asks the approver to **choose A or B**. The choice is
+  recorded: that item is confirmed, the other rejected, and it can't be changed twice.
+- AI guards: JSON-schema output validated with Zod and retried once; capped at the last 200 messages;
+  only the AI's suggestions are posted, and it never confirms or approves anything.
+- Migrations 0004 (messages, change_lists, change_items, drift_alerts, jobs, voice bucket; RLS on
+  all) and 0005 (item position).
+
+**Try it**
+1. Configure the Nexconn webhook first (human task below), or the change list will be empty.
+2. On a project with a v1 deliverable, open the client invite links in two browsers or phones
+   (one approver, one reviewer).
+3. Approver types "Please make the logo bigger". Reviewer taps the mic, says "make the logo smaller
+   and change the CTA to Shop now", and sends it.
+4. As the AM, press **Summarise feedback** on the deliverable. In the **Internal** tab you get a change
+   list card. In the client room, the approver gets a conflict card.
+5. Approver taps option A. In Internal, edit or reject items, then press **Send brief**.
+
+**Checks:** lint, typecheck, 40 unit tests, E2E Round 1 (67), Round 2 (36), Round 3 (34, real
+Gemini and Nexconn), and a browser check of both cards.
+
+**Known issues**
+- `gemini-3.8-flash` was returning 503/504 ("high demand") all day. While it does, summarising and
+  transcription fail with "The AI is busy right now…". The Round 3 E2E passed using the optional
+  `AI_FALLBACK_MODEL=gemini-3-flash-preview` (local only; production is still 3.8-only).
+- Nexconn's own voice-to-text isn't used (not available for Web); Gemini transcribes instead.
+
 ## Auth update: email + password (2026-11-21)
 
 - **Email switched off for now (EMAIL_ENABLED flag):** while email is off, "Email me a code instead" is

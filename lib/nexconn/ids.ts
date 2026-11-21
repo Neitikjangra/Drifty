@@ -23,4 +23,6 @@ export const BOT_NAME = "Drifty AI";
 export const MSG = {
   deliverable: "drifty:deliverable",
   receipt: "drifty:receipt",
+  changelist: "drifty:changelist",
+  conflict: "drifty:conflict",
 } as const;

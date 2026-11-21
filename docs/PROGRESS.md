@@ -4,10 +4,10 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 2 built, awaiting "approved"** (Round 1 fixes deployed; human tasks: Supabase email templates with {{ .Token }}, custom SMTP, real-phone test).
+- Round: **Round 3 built, awaiting "approved"** (human tasks: Nexconn webhook URL, AI_FALLBACK_MODEL decision, SMTP, real-phone test).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
-- Last updated: 2026-11-20
+- Last updated: 2026-11-21
 
 ## Section 0: setup
 - [x] Read CLAUDE.md, PRD, SRS, MASTER_PROMPT
@@ -66,11 +66,16 @@ sign-in link for a test agency user (no email sent).
 - [ ] User Try-it check → "approved"
 
 ## Round 3: FR-7, FR-8, FR-9, FR-12
-- [ ] Image + voice messages; webhook with signature verification; message store
-- [ ] Voice transcription (Nexconn STT or Gemini fallback)
-- [ ] AI-1 change list card; AM confirm/edit/reject
-- [ ] AI-2 conflict card for approver; choice recorded
-- [ ] Checks, deploy, changelog, report
+- [x] Image + voice messages (own recorder: ChatUI Web has none); webhook with signature verification; message store
+- [x] Voice transcription (Gemini; Nexconn STT not available on Web)
+- [x] AI-1 change list card; AM confirm/edit/reject; Send brief
+- [x] AI-2 conflict card for approver; choice recorded
+- [x] Checks (40 unit, E2E 67+36+34), changelog, PRD section 6 updated
+- [ ] Deployed + webhook configured in Nexconn Console (human) + user Try-it → "approved"
+
+**Round 3 lessons:** @google/genai must use `apiVersion: "v1beta"` (v1 404s on preview models and
+JSON-schema output); its internal retries hide overload for minutes, so retries are ours (1 attempt,
+25 s timeout, 60 s circuit breaker, optional AI_FALLBACK_MODEL).
 
 ## Round 4: FR-11, FR-13 full, FR-14
 - [ ] AI-3 drift check card on new version; AM actions

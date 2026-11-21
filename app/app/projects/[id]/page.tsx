@@ -113,7 +113,7 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row">
         {tabs.length && appKey ? (
-          <RoomView appKey={appKey} rooms={tabs} className="h-[70dvh] lg:h-auto lg:min-h-[560px] lg:flex-1" />
+          <RoomView appKey={appKey} rooms={tabs} projectId={project.id} canManage={canManage} className="h-[70dvh] lg:h-auto lg:min-h-[560px] lg:flex-1" />
         ) : (
           <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border p-6 text-sm">
             This project&apos;s rooms aren&apos;t available right now.

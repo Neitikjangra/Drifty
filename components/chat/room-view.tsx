@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ChatHostHandle } from "./chat-host";
 import type { LinkState } from "./connection";
+import { VoiceRecorder } from "./voice-recorder";
 
 /** Slim connection banner; hidden while connected. */
 function LinkBar({ state }: { state: LinkState }) {
@@ -43,9 +44,9 @@ type Phase = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message:
  * Hosts Nexconn ChatUI for one or more rooms. With several rooms (agency view) it
  * shows tabs; a client sees only their single client room.
  */
-async function post(url: string, body?: unknown) {
+async function post(url: string, body?: unknown, method = "POST") {
   const res = await fetch(url, {
-    method: "POST",
+    method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   }).catch(() => null);
@@ -61,12 +62,18 @@ export function RoomView({
   rooms,
   className,
   canApprove = false,
+  canManage = false,
+  projectId,
 }: {
   appKey: string;
   rooms: RoomTab[];
   className?: string;
   /** The project's approver sees Approve / Request changes on cards (the server checks again). */
   canApprove?: boolean;
+  /** Owners/AMs see Confirm / Edit / Reject and Send brief on change lists (the server checks again). */
+  canManage?: boolean;
+  /** Enables voice notes for this project's rooms. */
+  projectId?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<ChatHostHandle | null>(null);
@@ -95,6 +102,12 @@ export function RoomView({
             approve: (versionId) => post(`/api/versions/${versionId}/approve`),
             requestChanges: (versionId, note) =>
               post(`/api/versions/${versionId}/request-changes`, note ? { note } : {}),
+            canManage: () => canManage,
+            changeItem: (itemId, action, text) =>
+              post(`/api/changes/${itemId}`, action === "edit" ? { action, text } : { action }, "PATCH"),
+            sendBrief: (listId) => post(`/api/changelists/${listId}/brief`),
+            resolveConflict: (conflictId, choice, text) =>
+              post(`/api/conflicts/${conflictId}/resolve`, choice === "other" ? { choice, text } : { choice }),
           },
         });
         if (cancelled) return;
@@ -181,6 +194,7 @@ export function RoomView({
         ref={containerRef}
         className={cn("min-h-0 flex-1 overflow-hidden rounded-lg border", phase.kind !== "ready" && "hidden")}
       />
+      {projectId && <VoiceRecorder projectId={projectId} eventName="drifty:voice" />}
     </div>
   );
 }

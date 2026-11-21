@@ -224,10 +224,16 @@ versions(deliverable_id, number int, asset_path, asset_sha256, asset_mime, copy_
          card_message_id text, created_by)   -- asset_mime added R2 (image vs PDF card)
 messages(project_id, channel_id, nexconn_msg_id unique, author_id, kind, text,
          reply_to_msg_id, voice_url, transcript, sent_at)
+change_lists(version_id, card_message_id, created_by, brief_sent_at, message_count)
+        -- R3: one per "Summarise feedback" run; holds the drifty:changelist card id
 change_items(version_id, text, type text, author_ids uuid[], source_msg_ids text[],
-             status text, confidence real, confirmed_by)
-drift_alerts(deliverable_id, version_id, kind text, detail jsonb, card_message_id,
-             resolved_by, resolved_at)
+             status text, confidence real, confirmed_by,
+             change_list_id, position int, origin text ('ai'|'conflict'|'manual'), conflict_id)
+        -- R3: change_list_id/position = item's row on the card; origin 'conflict' = the
+        --     approver's choice recorded as an item; conflict_id = the drift_alerts row
+drift_alerts(deliverable_id, version_id, kind text ('feedback'|'version'|'scope'|'approval'),
+             detail jsonb, card_message_id, resolved_by, resolved_at)
+        -- R3: kind 'feedback' = AI-2 conflict (detail: itemA, itemB, summary, choice)
 approvals(version_id, approver_id, approved_at, copy_snapshot, asset_sha256)  -- insert only
 jobs(kind, payload jsonb, status, attempts int, last_error)
 ```
@@ -239,7 +245,7 @@ jobs(kind, payload jsonb, status, attempts int, last_error)
 | Type | Posted in | Content fields | Buttons (who) |
 | --- | --- | --- | --- |
 | `drifty:deliverable` | Client room | deliverableId, versionId, version, title, imageUrl (access-checked `/api/assets/:versionId`), copy, dueDate, status, assetKind (image/pdf, added R2) | Approve vX, Request changes (approver only) |
-| `drifty:changelist` | Internal room | deliverableId, versionId, items\[{id, text, type, author, sourceMsgId, status}\] | Confirm / Edit / Reject per item; Send brief (AM) |
+| `drifty:changelist` | Internal room | deliverableId, versionId, items\[{id, text, type, author, sourceMsgId, status}\] (R3: live per-item status/text in metadata key `i<position>` = `{s,t}`) | Confirm / Edit / Reject per item; Send brief (AM) |
 | `drifty:conflict` | Client room | deliverableId, optionA{text, author}, optionB{text, author} | Choose A / Choose B / Other (approver) |
 | `drifty:drift` | Internal room | deliverableId, fromVersion, toVersion, results\[{itemId, verdict, note}\] | Back to creative / Send to client anyway (AM) |
 | `drifty:receipt` | Client room | versionId, approver, approvedAt | None |
@@ -279,6 +285,8 @@ Status changes are written through message extensions/metadata from the server o
 | `POST /api/deliverables/:id/summarise` | Run AI-1 + AI-2 |
 | `PATCH /api/changes/:id` | Confirm, edit or reject an item |
 | `POST /api/conflicts/:id/resolve` | Approver's choice |
+| `POST /api/changelists/:id/brief` | Post the confirmed items as the creative's brief in the internal room (R3) |
+| `POST /api/voice`, `GET /api/voice/:id` | Upload a recorded voice note and post it to the room; access-checked playback (R3: ChatUI Web has no recorder) |
 | `GET /api/projects/:id/ledger.csv` | Ledger export |
 
 ### Screens

@@ -1,6 +1,15 @@
 "use client";
 import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
 import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
+import { CHANGELIST_TAG, CONFLICT_TAG, defineChangeListElement, defineConflictElement } from "./feedback-cards";
+
+export const VOICE_MENU_ID = "drifty.voice";
+export const VOICE_EVENT = "drifty:voice";
+const MIC_ICON =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
+  );
 import {
   CARD_TAG,
   clearLiveMetadata,
@@ -168,7 +177,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   publish("connecting");
   const token = await fetchToken();
   const chat = await import("@nexconn/chat");
-  const { NCChatUIApplication } = await import("@nexconn/chatui");
+  const { NCChatUIApplication, ChatUIEvents } = await import("@nexconn/chatui");
   const { NCEngine, LogLevel, MessageHandler, GroupChannelIdentifier, ConnectionStatusHandler } = chat;
 
   NCEngine.initialize({
@@ -200,6 +209,20 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       component: { tagName: CARD_TAG, elementClass: defineDeliverableCardElement() },
     },
     {
+      messageType: MSG.changelist,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Change list]",
+      component: { tagName: CHANGELIST_TAG, elementClass: defineChangeListElement() },
+    },
+    {
+      messageType: MSG.conflict,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Please choose]",
+      component: { tagName: CONFLICT_TAG, elementClass: defineConflictElement() },
+    },
+    {
       messageType: MSG.receipt,
       isPersisted: true,
       isCounted: true,
@@ -207,6 +230,18 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       component: { tagName: RECEIPT_TAG, elementClass: defineReceiptElement() },
     },
   ]);
+
+  // Voice notes (FR-7): ChatUI for Web plays HD voice messages but has no recorder, so we add
+  // a mic button to its toolbar (custom InputMenu item, docs chatui-web/chat-ui/editor.md) and
+  // record in our own sheet; the server posts the note as a real Nexconn RC:HQVCMsg.
+  const menu = app.cloneInputMenu();
+  menu.items.push({ id: VOICE_MENU_ID, order: 5, icon: MIC_ICON, hoverIcon: MIC_ICON });
+  app.setInputMenu(menu);
+  app.addEventListener(ChatUIEvents.INPUT_MENU_ITEM_CLICK, (evt: { data?: { id?: string; channelModel?: { channelIdentifier?: { channelId?: string } } } }) => {
+    if (evt.data?.id !== VOICE_MENU_ID) return;
+    const channelId = evt.data.channelModel?.channelIdentifier?.channelId;
+    if (channelId) window.dispatchEvent(new CustomEvent(VOICE_EVENT, { detail: { channelId } }));
+  });
   app.ready();
 
   // Live card status: server-written metadata → window event → card elements.

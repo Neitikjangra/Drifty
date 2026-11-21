@@ -30,6 +30,14 @@ export interface CardActions {
   canApprove(): boolean;
   approve(versionId: string): Promise<void>;
   requestChanges(versionId: string, note: string): Promise<void>;
+  /** True for owners/AMs in the agency view (change lists). */
+  canManage(): boolean;
+  changeItem(itemId: string, action: "confirm" | "reject" | "edit", text?: string): Promise<void>;
+  sendBrief(changeListId: string): Promise<void>;
+  resolveConflict(conflictId: string, choice: "a" | "b" | "other", text?: string): Promise<void>;
+}
+export function getCardActions() {
+  return actions;
 }
 
 let actions: CardActions | null = null;
@@ -42,7 +50,7 @@ export function configureCardActions(a: CardActions | null) {
  * element) with its cached model, whose metadata is from load time; merging this cache
  * keeps the newer server-written status from being overwritten.
  */
-const liveMetadata = new Map<string, Record<string, string>>();
+export const liveMetadata = new Map<string, Record<string, string>>();
 export function recordLiveMetadata(messageId: string, metadata: Record<string, string>) {
   liveMetadata.set(messageId, { ...liveMetadata.get(messageId), ...metadata });
 }
@@ -50,13 +58,13 @@ export function clearLiveMetadata() {
   liveMetadata.clear();
 }
 
-interface SdkMessageLike {
+export interface SdkMessageLike {
   messageId?: string;
   content?: unknown;
   metadata?: Map<string, string>;
 }
 
-function unwrap(value: unknown): SdkMessageLike | null {
+export function unwrap(value: unknown): SdkMessageLike | null {
   if (!value || typeof value !== "object") return null;
   const v = value as { message?: SdkMessageLike } & SdkMessageLike;
   // ChatUIMessageModel has `.message`; a raw Message has `.messageId`.

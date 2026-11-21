@@ -91,7 +91,7 @@ export function DeliverablesPanel(props: {
       )}
       <ul className="space-y-3">
         {props.items.map((d) => (
-          <DeliverableItem key={d.id} item={d} projectId={props.projectId} canUpload={props.canUpload} />
+          <DeliverableItem key={d.id} item={d} projectId={props.projectId} canUpload={props.canUpload} canSummarise={props.canCreate} />
         ))}
       </ul>
     </section>
@@ -187,8 +187,33 @@ function NewDeliverableForm({
   );
 }
 
-function DeliverableItem({ item, projectId, canUpload }: { item: DeliverableRow; projectId: string; canUpload: boolean }) {
+function DeliverableItem({
+  item,
+  projectId,
+  canUpload,
+  canSummarise,
+}: {
+  item: DeliverableRow;
+  projectId: string;
+  canUpload: boolean;
+  canSummarise: boolean;
+}) {
   const router = useRouter();
+  const [summary, setSummary] = useState<{ busy: boolean; text: string; error: boolean }>({ busy: false, text: "", error: false });
+
+  async function summarise() {
+    setSummary({ busy: true, text: "", error: false });
+    try {
+      const r = await apiJson<{ items: number; conflicts: number; messages: number }>(`/api/deliverables/${item.id}/summarise`);
+      setSummary({
+        busy: false,
+        error: false,
+        text: `${r.items} change${r.items === 1 ? "" : "s"} suggested from ${r.messages} message${r.messages === 1 ? "" : "s"}${r.conflicts ? `, ${r.conflicts} conflict${r.conflicts > 1 ? "s" : ""} sent to the approver` : ""}. See the Internal room.`,
+      });
+    } catch (err) {
+      setSummary({ busy: false, error: true, text: err instanceof Error ? err.message : "Couldn't summarise, try again." });
+    }
+  }
   const [open, setOpen] = useState(false);
   const [copy, setCopy] = useState(item.copy);
   const [file, setFile] = useState<File | null>(null);
@@ -233,6 +258,18 @@ function DeliverableItem({ item, projectId, canUpload }: { item: DeliverableRow;
           Approved v{item.approval.version} by {item.approval.by},{" "}
           {new Date(item.approval.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </p>
+      )}
+      {canSummarise && item.status !== "approved" && (
+        <div className="space-y-1">
+          <Button size="sm" onClick={summarise} disabled={summary.busy}>
+            {summary.busy ? "Summarising… (up to 15 s)" : "Summarise feedback"}
+          </Button>
+          {summary.text && (
+            <p className={`text-xs ${summary.error ? "text-red-600" : "text-green-800"}`} role={summary.error ? "alert" : "status"}>
+              {summary.text}
+            </p>
+          )}
+        </div>
       )}
       {canUpload && item.status !== "approved" && !open && (
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
