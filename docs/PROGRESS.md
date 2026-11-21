@@ -4,8 +4,7 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 1 built, awaiting "approved"**. Round 0 approved; spike removed and
-  `SPIKE_ENABLED` deleted from Vercel. Human task: Supabase Auth URL settings for the live URL.
+- Round: **Round 2 built, awaiting "approved"** (Round 1 fixes deployed; human tasks: Supabase email templates with {{ .Token }}, custom SMTP, real-phone test).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-20
@@ -56,12 +55,14 @@ Local testing: `node scripts/dev-login-link.mjs am.test@drifty.test` prints a lo
 sign-in link for a test agency user (no email sent).
 
 ## Round 2: FR-4, FR-5, FR-6, FR-10, FR-13 core
-- [ ] Deliverable + v1 upload (Storage), card posted in client room
-- [ ] Approve / Request changes (approver only, server-verified)
-- [ ] In-place status via message extensions; superseded older cards
-- [ ] New version upload (vN+1)
-- [ ] Insert-only approvals row (copy snapshot, SHA-256)
-- [ ] Checks, deploy, changelog, report
+- [x] Migration 0003: deliverables, versions, approvals (insert-only: revoked privileges + trigger), private bucket
+- [x] Direct browser → Storage uploads (signed slot), server re-checks magic bytes/size/project, SHA-256
+- [x] Deliverable + v1 card in client room; access-checked /api/assets/:versionId
+- [x] Approve / Request changes (approver only, server-verified); status via message metadata
+- [x] New version (owner/AM/creative) posts vN+1, old card Superseded
+- [x] Approval row (copy snapshot, SHA-256) + drifty:receipt card
+- [x] 31 unit tests, E2E 67 + 36 (pnpm test:e2e against local :3100), two-browser UI run
+- [ ] Deploy + report + "approved"
 
 ## Round 3: FR-7, FR-8, FR-9, FR-12
 - [ ] Image + voice messages; webhook with signature verification; message store

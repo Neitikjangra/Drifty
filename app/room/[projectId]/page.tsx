@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { RoomView } from "@/components/chat/room-view";
 import { getCaller, projectAccess } from "@/lib/access";
+import { isProjectApprover } from "@/lib/auth/permissions";
 
 export const metadata: Metadata = { title: "Your room · Drifty", robots: { index: false } };
 
@@ -45,6 +46,7 @@ async function GuestRoom({ params }: { params: PageProps<"/room/[projectId]">["p
         appKey={appKey}
         rooms={[{ channelId: access.project.client_channel_id, label: "Room" }]}
         className="flex-1"
+        canApprove={isProjectApprover(access, access.project)}
       />
     </main>
   );

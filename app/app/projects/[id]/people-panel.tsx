@@ -96,7 +96,7 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
     ) : null;
 
   return (
-    <aside className="w-full space-y-5 rounded-lg border p-4 lg:w-80 lg:shrink-0">
+    <aside className="w-full space-y-5 rounded-lg border p-4">
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Client people</h2>
         {props.members.length === 0 ? (

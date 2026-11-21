@@ -1,14 +1,23 @@
 "use client";
-import { deliverableCardSchema, resolveStatus, STATUS_LABEL, type DeliverableCard, type DeliverableStatus } from "@/lib/cards";
+import {
+  deliverableCardSchema,
+  receiptCardSchema,
+  resolveStatus,
+  STATUS_LABEL,
+  type CardStatus,
+  type DeliverableCard,
+} from "@/lib/cards";
 
 /**
- * Web Component for `drifty:deliverable`. ChatUI renders it as `nc-c-drifty-deliverable`
- * and sets `.message` (a ChatUIMessageModel wrapping the Chat SDK Message).
+ * Web Components for `drifty:deliverable` and `drifty:receipt`. ChatUI renders them as
+ * `nc-c-<tag>` and sets `.message` (a ChatUIMessageModel wrapping the Chat SDK Message).
  * Status is read from server-written message metadata and updated live from
  * `drifty:metadata` window events (fed by NCEngine's onMessageMetadataUpdated).
+ * Buttons only call our API; the server decides and writes the status (FR-5/FR-6).
  */
 
 export const CARD_TAG = "drifty-deliverable";
+export const RECEIPT_TAG = "drifty-receipt";
 export const METADATA_EVENT = "drifty:metadata";
 
 export interface MetadataEventDetail {
@@ -17,9 +26,10 @@ export interface MetadataEventDetail {
 }
 
 export interface CardActions {
-  /** Server call that approves; resolves when the server accepted it. */
-  approve(messageId: string): Promise<void>;
+  /** True only for the project's approver (the server checks again). */
   canApprove(): boolean;
+  approve(versionId: string): Promise<void>;
+  requestChanges(versionId: string, note: string): Promise<void>;
 }
 
 let actions: CardActions | null = null;
@@ -54,37 +64,59 @@ function unwrap(value: unknown): SdkMessageLike | null {
   return v;
 }
 
-const CHIP: Record<DeliverableStatus, { bg: string; fg: string }> = {
+const CHIP: Record<CardStatus, { bg: string; fg: string }> = {
   draft: { bg: "#f1f5f9", fg: "#334155" },
   in_review: { bg: "#fef3c7", fg: "#92400e" },
   changes_requested: { bg: "#fee2e2", fg: "#991b1b" },
   approved: { bg: "#dcfce7", fg: "#166534" },
+  superseded: { bg: "#f1f5f9", fg: "#64748b" },
 };
 
 const STYLE = `
 :host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a}
 .card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff}
+.card.old{opacity:.7}
 img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f8fafc}
+.file{display:flex;align-items:center;gap:8px;padding:14px 12px;background:#f8fafc;font-size:13px;color:#0f172a;text-decoration:none;border-bottom:1px solid #e2e8f0}
 .body{padding:10px 12px;display:grid;gap:6px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .title{font-weight:600;font-size:14px;line-height:1.3}
 .ver{font-size:12px;color:#64748b}
 .copy{font-size:13px;color:#334155;line-height:1.4;white-space:pre-wrap}
 .chip{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap;transition:background .2s}
-button{all:unset;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:8px;padding:9px 12px;background:#0f172a;color:#fff;min-height:20px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:8px;padding:9px 10px;background:#0f172a;color:#fff;min-height:20px}
+button.secondary{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
 button[disabled]{opacity:.55;cursor:default}
+textarea{box-sizing:border-box;width:100%;min-height:64px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit;font-size:14px;resize:vertical}
 .err{font-size:12px;color:#b91c1c}
 .meta{font-size:12px;color:#166534}
+.muted{font-size:12px;color:#64748b}
 `;
+
+function el(tag: string, cls: string, text?: string) {
+  const n = document.createElement(tag);
+  n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
 
 export function defineDeliverableCardElement(): CustomElementConstructor {
   class DeliverableCardElement extends HTMLElement {
     private _message: SdkMessageLike | null = null;
     private _card: DeliverableCard | null = null;
-    private _status: DeliverableStatus = "in_review";
+    private _status: CardStatus = "in_review";
     private _meta: Record<string, string> = {};
     private _busy = false;
     private _error = "";
+    private _noteOpen = false;
+    private _note = "";
     private readonly _root: ShadowRoot;
     private readonly _onMeta = (e: Event) => {
       const d = (e as CustomEvent<MetadataEventDetail>).detail;
@@ -92,6 +124,7 @@ export function defineDeliverableCardElement(): CustomElementConstructor {
       this._meta = { ...this._meta, ...(liveMetadata.get(d.messageId) ?? d.metadata) };
       if (this._card) this._status = resolveStatus(this._card, this._meta);
       this._busy = false;
+      this._noteOpen = false;
       this.render();
     };
 
@@ -122,18 +155,22 @@ export function defineDeliverableCardElement(): CustomElementConstructor {
       window.removeEventListener(METADATA_EVENT, this._onMeta);
     }
 
-    private async approve() {
-      const id = this._message?.messageId;
-      if (!id || !actions || this._busy) return;
+    private async run(fn: () => Promise<void>, confirmed: CardStatus) {
+      if (this._busy) return;
       this._busy = true;
       this._error = "";
       this.render();
       try {
-        await actions.approve(id);
-        // The chip turns green when the metadata event arrives (same path as other viewers).
-      } catch {
+        await fn();
+        // The server accepted and already wrote the status; show it now for the person who
+        // tapped. Everyone else (and this card again) gets it from the live metadata event.
+        this._status = confirmed;
         this._busy = false;
-        this._error = "Couldn't approve. Please try again.";
+        this._noteOpen = false;
+        this.render();
+      } catch (err) {
+        this._busy = false;
+        this._error = err instanceof Error ? err.message : "Something went wrong. Please try again.";
         this.render();
       }
     }
@@ -152,6 +189,7 @@ export function defineDeliverableCardElement(): CustomElementConstructor {
         this._meta.actedBy ?? null,
         this._busy,
         this._error,
+        this._noteOpen,
         actions?.canApprove() ?? false,
       ]);
       if (key === this._viewKey) return;
@@ -164,18 +202,28 @@ export function defineDeliverableCardElement(): CustomElementConstructor {
       root.append(style);
 
       const card = this._card;
-      const box = el("div", "card");
+      const box = el("div", this._status === "superseded" ? "card old" : "card");
       if (!card) {
         box.append(el("div", "body", "Unsupported card"));
         root.append(box);
         return;
       }
 
-      const img = document.createElement("img");
-      img.src = card.imageUrl;
-      img.alt = card.title;
-      img.loading = "lazy";
-      box.append(img);
+      if (card.assetKind === "pdf") {
+        const a = document.createElement("a");
+        a.className = "file";
+        a.href = card.imageUrl;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = `📄 Open PDF (v${card.version})`;
+        box.append(a);
+      } else {
+        const img = document.createElement("img");
+        img.src = card.imageUrl;
+        img.alt = card.title;
+        img.loading = "lazy";
+        box.append(img);
+      }
 
       const body = el("div", "body");
       const head = el("div", "row");
@@ -186,34 +234,120 @@ export function defineDeliverableCardElement(): CustomElementConstructor {
       chip.setAttribute("role", "status");
       head.append(chip);
       body.append(head);
-      body.append(el("div", "ver", `Version ${card.version}`));
+      const due = fmtDate(card.dueDate);
+      body.append(el("div", "ver", `Version ${card.version}${due ? ` · due ${due}` : ""}`));
       if (card.copy) body.append(el("div", "copy", card.copy));
 
+      const by = this._meta.actedBy;
       if (this._status === "approved") {
-        const by = this._meta.actedBy;
         body.append(el("div", "meta", by ? `Approved by ${by}` : "Approved"));
-      } else if (actions?.canApprove()) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = this._busy ? "Approving…" : `Approve v${card.version}`;
-        btn.disabled = this._busy;
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          void this.approve();
-        });
-        body.append(btn);
+      } else if (this._status === "superseded") {
+        body.append(el("div", "muted", "A newer version was posted below."));
+      } else {
+        if (this._status === "changes_requested") {
+          body.append(el("div", "muted", by ? `Changes requested by ${by}` : "Changes requested"));
+        }
+        if (actions?.canApprove()) this.renderActions(body, card);
       }
       if (this._error) body.append(el("div", "err", this._error));
       box.append(body);
       root.append(box);
     }
+
+    private renderActions(body: HTMLElement, card: DeliverableCard) {
+      if (this._noteOpen) {
+        const ta = document.createElement("textarea");
+        ta.placeholder = "What should change? (optional)";
+        ta.value = this._note;
+        ta.maxLength = 2000;
+        ta.addEventListener("input", () => (this._note = ta.value));
+        ta.addEventListener("click", (e) => e.stopPropagation());
+        body.append(ta);
+        const row = el("div", "btns");
+        const cancel = document.createElement("button");
+        cancel.className = "secondary";
+        cancel.textContent = "Cancel";
+        cancel.disabled = this._busy;
+        cancel.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this._noteOpen = false;
+          this.render();
+        });
+        const send = document.createElement("button");
+        send.textContent = this._busy ? "Sending…" : "Send";
+        send.disabled = this._busy;
+        send.addEventListener("click", (e) => {
+          e.stopPropagation();
+          void this.run(() => actions!.requestChanges(card.versionId, this._note.trim()), "changes_requested");
+        });
+        row.append(cancel, send);
+        body.append(row);
+        setTimeout(() => ta.focus(), 0);
+        return;
+      }
+      const row = el("div", "btns");
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.textContent = this._busy ? "Approving…" : `Approve v${card.version}`;
+      approve.disabled = this._busy;
+      approve.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void this.run(() => actions!.approve(card.versionId), "approved");
+      });
+      row.append(approve);
+      if (this._status !== "changes_requested") {
+        const changes = document.createElement("button");
+        changes.type = "button";
+        changes.className = "secondary";
+        changes.textContent = "Request changes";
+        changes.disabled = this._busy;
+        changes.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this._noteOpen = true;
+          this.render();
+        });
+        row.append(changes);
+      } else {
+        approve.style.gridColumn = "1 / -1";
+      }
+      body.append(row);
+    }
   }
   return DeliverableCardElement;
 }
 
-function el(tag: string, cls: string, text?: string) {
-  const n = document.createElement(tag);
-  n.className = cls;
-  if (text !== undefined) n.textContent = text;
-  return n;
+/** `drifty:receipt`: a small, read-only approval receipt. */
+export function defineReceiptElement(): CustomElementConstructor {
+  class ReceiptElement extends HTMLElement {
+    private readonly _root: ShadowRoot;
+    private _key = "";
+    constructor() {
+      super();
+      this._root = this.attachShadow({ mode: "open" });
+    }
+    set message(value: unknown) {
+      const m = unwrap(value);
+      const parsed = receiptCardSchema.safeParse(m?.content);
+      const key = JSON.stringify(parsed.success ? parsed.data : null);
+      if (key === this._key) return;
+      this._key = key;
+      this._root.innerHTML = "";
+      const style = document.createElement("style");
+      style.textContent = `:host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif}
+.r{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:10px 12px;font-size:13px;color:#14532d;display:grid;gap:2px}
+.t{font-weight:600}.s{font-size:12px;color:#166534}`;
+      const box = el("div", "r");
+      if (parsed.success) {
+        const r = parsed.data;
+        box.append(el("div", "t", `✓ Approved${r.title ? `: ${r.title}` : ""}${r.version ? ` v${r.version}` : ""}`));
+        const when = new Date(r.approvedAt);
+        box.append(el("div", "s", `by ${r.approver} · ${Number.isNaN(when.getTime()) ? "" : when.toLocaleString()}`));
+        box.append(el("div", "s", "Recorded in the approval ledger."));
+      } else {
+        box.append(el("div", "t", "Approval recorded"));
+      }
+      this._root.append(style, box);
+    }
+  }
+  return ReceiptElement;
 }

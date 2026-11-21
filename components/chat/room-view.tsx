@@ -43,7 +43,31 @@ type Phase = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message:
  * Hosts Nexconn ChatUI for one or more rooms. With several rooms (agency view) it
  * shows tabs; a client sees only their single client room.
  */
-export function RoomView({ appKey, rooms, className }: { appKey: string; rooms: RoomTab[]; className?: string }) {
+async function post(url: string, body?: unknown) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  }).catch(() => null);
+  if (!res) throw new Error("You seem to be offline. Try again.");
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "Something went wrong. Please try again.");
+  }
+}
+
+export function RoomView({
+  appKey,
+  rooms,
+  className,
+  canApprove = false,
+}: {
+  appKey: string;
+  rooms: RoomTab[];
+  className?: string;
+  /** The project's approver sees Approve / Request changes on cards (the server checks again). */
+  canApprove?: boolean;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<ChatHostHandle | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
@@ -66,8 +90,12 @@ export function RoomView({ appKey, rooms, className }: { appKey: string; rooms: 
           appKey,
           container: containerRef.current,
           initialChannelId: initial,
-          // Deliverable actions arrive in Round 2.
-          cardActions: { canApprove: () => false, approve: async () => {} },
+          cardActions: {
+            canApprove: () => canApprove,
+            approve: (versionId) => post(`/api/versions/${versionId}/approve`),
+            requestChanges: (versionId, note) =>
+              post(`/api/versions/${versionId}/request-changes`, note ? { note } : {}),
+          },
         });
         if (cancelled) return;
         handleRef.current = handle;
@@ -81,6 +109,7 @@ export function RoomView({ appKey, rooms, className }: { appKey: string; rooms: 
       handleRef.current = null;
       if (acquired) release?.();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appKey, initial, attempt]);
 
   async function switchTo(channelId: string) {

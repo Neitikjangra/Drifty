@@ -1,5 +1,47 @@
 # Changelog
 
+## Round 2: deliverables, versions, approvals (FR-4, FR-5, FR-6, FR-10, FR-13 core) (2026-11-21)
+
+**Built**
+- FR-4: on the project page, **Deliverables → New deliverable**: title, draft file (image or PDF,
+  up to 20 MB), caption, due date. The file goes straight from the browser to a private
+  Supabase bucket via a one-time signed slot. The server re-checks type (magic bytes), size and
+  project, stores the SHA-256, creates Deliverable + v1, and Drifty AI posts a
+  `drifty:deliverable` card in the client room. Images are served via the access-checked
+  `/api/assets/:versionId` (short-lived signed URL).
+- FR-5: only the project's approver sees **Approve vN** and **Request changes** (optional note,
+  posted in the room as the approver's own message). Everyone can reply in the chat. The
+  server re-checks that the caller is the named approver.
+- FR-6: status flows In review → Changes requested → Approved, updated in place for everyone
+  through Nexconn message metadata written by the server only.
+- FR-10: **Upload vN+1** (owner, AM or creative) posts a new card and marks the old card
+  **Superseded**. Approving an old version is refused.
+- FR-13 core: every approval writes an `approvals` row (version, approver, time, exact copy
+  snapshot, asset SHA-256). The table is insert-only: privileges are revoked and a trigger
+  blocks update/delete/truncate, even for the service role. A `drifty:receipt` card is posted.
+- Migration 0003 (deliverables, versions, approvals, private `deliverables` bucket).
+
+**Try it**
+1. Project page → **Deliverables → New deliverable** → title "Diwali post 1", pick an image,
+   add a caption → **Post to client room**.
+2. On the approver's phone the card appears with **Approve v1** / **Request changes**. Tap
+   **Request changes**, type "make the logo bigger" → **Send**. Both screens show
+   "Changes requested", and the note appears in the chat.
+3. Laptop → **Upload v2** with a new image → the old card turns "Superseded", and a v2 card
+   appears.
+4. Phone → **Approve v2** → the card turns green ("Approved by …") on both screens, plus a
+   receipt. The project page shows "Approved v2 by … ".
+
+**Verified locally:** 36 Round 2 E2E checks (uploads, limits, fake-file rejection, private
+bucket, approver-only actions, supersede, approval row contents, ledger insert-only) and all
+67 Round 1 checks pass. Two-browser UI run at 375 px: v1 card with image, request changes,
+v2 supersedes v1 live, approve v2 turns both screens green within 0.1 s of each other.
+
+**Known issues:** an action takes ~3 s from tap to green on a local server (DB round trips
+from this machine; lookups are now parallel; production is likely faster). No team invites
+yet, so "creative" uploads can only be tested by owner/AM. Video links (FR-4 mentions them)
+aren't supported; images and PDF only.
+
 ## Round 1: accounts, workspace, projects, rooms (FR-1, FR-2, FR-3) (2026-11-20)
 
 **Built**

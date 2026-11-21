@@ -46,14 +46,17 @@ export async function projectAccess(projectId: string, caller?: Caller): Promise
   if (!/^[0-9a-f-]{36}$/.test(projectId)) return null;
   const c = caller ?? (await getCaller());
   if (c.kind === "anonymous") return null;
-  const project = await getProject(projectId);
+  const [project, guestRole] = await Promise.all([
+    getProject(projectId),
+    c.kind === "guest" ? getGuestRole(projectId, c.userId) : Promise.resolve(null),
+  ]);
   if (!project || project.archived) return null;
 
   if (c.kind === "member") {
     if (!c.membership || c.membership.workspace.id !== project.workspace_id) return null;
     return { kind: "member", project, role: c.membership.role, userId: c.userId, profile: c.profile };
   }
-  const role = await getGuestRole(project.id, c.userId);
+  const role = guestRole;
   if (!role) return null;
   return { kind: "guest", project, role, userId: c.userId, profile: c.profile };
 }

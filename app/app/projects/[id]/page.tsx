@@ -9,6 +9,9 @@ import { allowedRooms, canManageProjects } from "@/lib/auth/permissions";
 import { listGuests, listInvites } from "@/lib/db/repo";
 import type { Invite, ProjectGuest } from "@/lib/db/types";
 import { PeoplePanel, type PeopleData } from "./people-panel";
+import { DeliverablesPanel, type DeliverableRow } from "./deliverables-panel";
+import { listDeliverables } from "@/lib/db/deliverables";
+import { canUploadVersions } from "@/lib/auth/permissions";
 
 /** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
 function buildPeople(guests: ProjectGuest[], invites: Invite[]): PeopleData {
@@ -66,7 +69,26 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
   const { project, role } = access;
   const rooms = allowedRooms({ kind: "member", role });
   const canManage = canManageProjects(role);
-  const [guests, invites] = await Promise.all([listGuests(project.id), canManage ? listInvites(project.id) : []]);
+  const [guests, invites, deliverables] = await Promise.all([
+    listGuests(project.id),
+    canManage ? listInvites(project.id) : [],
+    listDeliverables(project.id),
+  ]);
+  const nameOf = new Map(guests.map((g) => [g.user_id, g.display_name]));
+  const deliverableRows: DeliverableRow[] = deliverables.map((d) => {
+    const current = d.versions.find((v) => v.number === d.current_version);
+    const appr = d.approvals[0];
+    const apprVersion = appr ? d.versions.find((v) => v.id === appr.version_id)?.number ?? d.current_version : 0;
+    return {
+      id: d.id,
+      title: d.title,
+      status: d.status,
+      version: d.current_version,
+      dueDate: d.due_date,
+      copy: current?.copy_text ?? "",
+      approval: appr ? { version: apprVersion, by: nameOf.get(appr.approver_id) ?? "Approver", at: appr.approved_at } : null,
+    };
+  });
   const appKey = process.env.NEXT_PUBLIC_NEXCONN_APP_KEY ?? "";
 
   const tabs = [
@@ -97,7 +119,16 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
             This project&apos;s rooms aren&apos;t available right now.
           </div>
         )}
-        <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
+        <div className="w-full space-y-4 lg:w-80 lg:shrink-0">
+          <DeliverablesPanel
+            projectId={project.id}
+            canCreate={canManage}
+            canUpload={canUploadVersions(role)}
+            hasApprover={Boolean(project.approver_id)}
+            items={deliverableRows}
+          />
+          <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
+        </div>
       </div>
     </main>
   );

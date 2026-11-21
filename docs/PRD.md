@@ -220,8 +220,8 @@ invites(project_id, email_or_phone, display_name, role, token_hash, expires_at, 
         -- R1: display_name/used_by/created_by added; used_at renamed first_used_at,
         --     last_used_at added (links are reusable by the one invited person)
 deliverables(project_id, title, due_date, status text, current_version int)
-versions(deliverable_id, number int, asset_path, asset_sha256, copy_text,
-         card_message_id text, created_by)
+versions(deliverable_id, number int, asset_path, asset_sha256, asset_mime, copy_text,
+         card_message_id text, created_by)   -- asset_mime added R2 (image vs PDF card)
 messages(project_id, channel_id, nexconn_msg_id unique, author_id, kind, text,
          reply_to_msg_id, voice_url, transcript, sent_at)
 change_items(version_id, text, type text, author_ids uuid[], source_msg_ids text[],
@@ -232,13 +232,13 @@ approvals(version_id, approver_id, approved_at, copy_snapshot, asset_sha256)  --
 jobs(kind, payload jsonb, status, attempts int, last_error)
 ```
 
-**Status values.** Deliverable: `draft, in_review, changes_requested, approved`. Change item: `suggested, confirmed, rejected, done, missing, reversed, needs_check`.
+**Status values.** Deliverable: `draft, in_review, changes_requested, approved`. Card (message metadata) adds `superseded` for older versions. Change item: `suggested, confirmed, rejected, done, missing, reversed, needs_check`.
 
 ### Custom Nexconn message types (content JSON)
 
 | Type | Posted in | Content fields | Buttons (who) |
 | --- | --- | --- | --- |
-| `drifty:deliverable` | Client room | deliverableId, versionId, version, title, imageUrl, copy, dueDate, status | Approve vX, Request changes (approver only) |
+| `drifty:deliverable` | Client room | deliverableId, versionId, version, title, imageUrl (access-checked `/api/assets/:versionId`), copy, dueDate, status, assetKind (image/pdf, added R2) | Approve vX, Request changes (approver only) |
 | `drifty:changelist` | Internal room | deliverableId, versionId, items\[{id, text, type, author, sourceMsgId, status}\] | Confirm / Edit / Reject per item; Send brief (AM) |
 | `drifty:conflict` | Client room | deliverableId, optionA{text, author}, optionB{text, author} | Choose A / Choose B / Other (approver) |
 | `drifty:drift` | Internal room | deliverableId, fromVersion, toVersion, results\[{itemId, verdict, note}\] | Back to creative / Send to client anyway (AM) |

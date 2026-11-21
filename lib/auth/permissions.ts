@@ -8,6 +8,19 @@ export function canManageProjects(role: MemberRole | null | undefined): boolean 
   return role === "owner" || role === "am";
 }
 
+/** Upload new versions of a deliverable (FR-10): creatives too. */
+export function canUploadVersions(role: MemberRole | null | undefined): boolean {
+  return role === "owner" || role === "am" || role === "creative";
+}
+
+/** Only the project's named approver may approve or request changes (FR-5). */
+export function isProjectApprover(
+  who: { kind: "member" | "guest"; role: string; userId: string },
+  project: { approver_id: string | null },
+): boolean {
+  return who.kind === "guest" && who.role === "approver" && project.approver_id === who.userId;
+}
+
 /** Agency roles that sit in the client room (creatives work in the internal room). */
 export function joinsClientRoom(role: MemberRole): boolean {
   return role === "owner" || role === "am";

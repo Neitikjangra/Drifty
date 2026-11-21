@@ -7,7 +7,9 @@ import {
   configureCardActions,
   recordLiveMetadata,
   defineDeliverableCardElement,
+  defineReceiptElement,
   METADATA_EVENT,
+  RECEIPT_TAG,
   type CardActions,
   type MetadataEventDetail,
 } from "./deliverable-card-element";
@@ -196,6 +198,13 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       isCounted: true,
       digest: () => "[Deliverable]",
       component: { tagName: CARD_TAG, elementClass: defineDeliverableCardElement() },
+    },
+    {
+      messageType: MSG.receipt,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Approved]",
+      component: { tagName: RECEIPT_TAG, elementClass: defineReceiptElement() },
     },
   ]);
   app.ready();

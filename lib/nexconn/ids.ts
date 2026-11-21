@@ -22,4 +22,5 @@ export const BOT_NAME = "Drifty AI";
 /** Custom message types. Must be <= 32 chars and must not start with RC: / NC:. */
 export const MSG = {
   deliverable: "drifty:deliverable",
+  receipt: "drifty:receipt",
 } as const;

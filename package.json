@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "db:migrate": "node scripts/migrate.mjs",
-    "test:e2e": "node scripts/e2e-round1.mjs"
+    "test:e2e": "node scripts/e2e-round1.mjs && node scripts/e2e-round2.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
