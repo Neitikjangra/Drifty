@@ -84,18 +84,10 @@ export function releaseChat() {
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
- * The providers mount asynchronously after the root element is attached, and the
- * channel list syncs after connect; opening before that shows an empty history.
+ * The providers mount asynchronously after the root element is attached, and the channel
+ * list syncs after connect; opening before that shows an empty history (see openWanted).
  * Uses timers, not requestAnimationFrame, which never fires in background tabs.
  */
-async function openWhenReady(open: () => Promise<{ isOk: boolean }>) {
-  await sleep(800);
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await open().catch(() => ({ isOk: false }));
-    if (res.isOk) return;
-    await sleep(400);
-  }
-}
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -328,12 +320,27 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     if (g) app.updateGroupProfile(g);
     return app.openChannel(new GroupChannelIdentifier(channelId), false);
   };
+  // The room the user wants. A tab tapped while ChatUI is still mounting must win over the
+  // delayed first open (and must not fail silently and leave the bare channel list).
+  let wanted = opts.initialChannelId;
+  let starting = true;
+  const openWanted = async (delayMs: number) => {
+    await sleep(delayMs);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const target = wanted;
+      const res = await openRoom(target).catch(() => ({ isOk: false }));
+      if (res.isOk && target === wanted) return;
+      if (!res.isOk) await sleep(400);
+    }
+  };
   // Don't block start-up on this; the user can always tap the room in the list.
-  void openWhenReady(() => openRoom(opts.initialChannelId));
+  void openWanted(800).finally(() => (starting = false));
 
   return {
     async open(channelId) {
-      await openRoom(channelId);
+      wanted = channelId;
+      if (starting) return; // the start-up loop opens the latest choice
+      await openWanted(0);
     },
     async destroy() {
       keeper?.dispose();

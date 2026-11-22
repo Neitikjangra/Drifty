@@ -66,10 +66,11 @@ test("new agency completes the demo project", async ({ page, browser }) => {
   // Rows carry their status as a class; confirm whatever is still "suggested" (the CTA change).
   const card = page.locator("drifty-changelist, nc-c-drifty-changelist").first();
   const suggested = page.locator(".item.suggested");
-  const chatTab = page.getByRole("tab", { name: "Internal" });
+  // Wheel over the chat itself (not the page) so ChatUI loads older messages.
+  const chatBox = page.locator("nc-chat-ui-app-provider");
   for (let i = 0; i < 15 && (await card.count()) === 0; i++) {
-    const box = await chatTab.boundingBox();
-    if (box) await page.mouse.move(box.x + 40, box.y + 260);
+    const box = await chatBox.boundingBox();
+    if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.wheel(0, -500);
     await page.waitForTimeout(700);
   }

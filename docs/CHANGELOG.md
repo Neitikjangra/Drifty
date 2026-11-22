@@ -1,5 +1,22 @@
 # Changelog
 
+## Pre-submission audit (2026-11-22)
+
+- **AI was down in production:** the Gemini key is on the Free Tier, and its *daily* quota was
+  used up on gemini-3.8-flash, 3-flash-preview, 3.5-flash and flash-latest, so Summarise and the
+  drift check failed.
+  - Added `gemini-flash-lite-latest` and `gemini-3.5-flash-lite` (approved) as the first backups
+    in production. Both were tested on the real demo: separate logo items for each person, the CTA
+    flagged missing, the bigger logo done.
+  - A model whose daily quota is used up is now skipped for 10 minutes, not 1.
+  - **Round 3 is back to 34/34, with the change list in 12.9 s** (target 15 s). Round 4 is 38/38.
+- **Room tabs on phones:** tapping Internal while the chat was still starting could be undone by
+  the delayed first open, or fail silently and leave ChatUI's bare channel list. The room you
+  pick now always wins, with retries.
+- **Demo test:** the Playwright test now scrolls the chat, not the page, to reach older cards.
+- **All suites:** 69 unit tests; E2E Round 1: 67, Round 2: 36, Round 3: 34, Round 4: 38, Round 5:
+  28, Round 6: 22, all passing; Playwright demo path passing.
+
 ## Round 6: Should items (FR-15, FR-16, FR-17, FR-18) (2026-11-22)
 
 **Built**
