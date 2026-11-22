@@ -90,7 +90,7 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
                   <span className="font-medium">
                     {r.deliverable} · v{r.version}
                   </span>
-                  <a className="text-xs text-blue-700 underline" href={`/api/assets/${r.versionId}`} target="_blank" rel="noopener">
+                  <a className="text-xs text-dark-teal-600 underline" href={`/api/assets/${r.versionId}`} target="_blank" rel="noopener">
                     File
                   </a>
                 </div>
@@ -124,7 +124,7 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
                     <td className="p-2 whitespace-nowrap">{istTime(r.approvedAt)}</td>
                     <td className="max-w-md p-2 whitespace-pre-wrap">{r.copy || <span className="text-muted-foreground">(no copy)</span>}</td>
                     <td className="p-2">
-                      <a className="text-blue-700 underline" href={`/api/assets/${r.versionId}`} target="_blank" rel="noopener">
+                      <a className="text-dark-teal-600 underline" href={`/api/assets/${r.versionId}`} target="_blank" rel="noopener">
                         Open
                       </a>
                       <div className="text-muted-foreground font-mono text-[10px]" title={r.assetSha256}>

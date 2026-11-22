@@ -12,7 +12,7 @@ function LinkBar({ state }: { state: LinkState }) {
   if (state === "connected") return null;
   if (state === "kicked") {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-900" role="status">
+      <div className="flex items-center justify-between gap-2 rounded-md bg-beige-500 px-3 py-1.5 text-xs text-beige-100" role="status">
         <span>This room is open on another device or tab, so new messages go there.</span>
         <button
           className="shrink-0 font-semibold underline underline-offset-2"
@@ -26,7 +26,7 @@ function LinkBar({ state }: { state: LinkState }) {
   const text = state === "offline" ? "You're offline. Messages will arrive when you're back online." : state === "connecting" ? "Connecting…" : "Reconnecting…";
   return (
     <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md px-3 py-1.5 text-xs" role="status" aria-live="polite">
-      <span className="inline-block size-2 animate-pulse rounded-full bg-amber-500" aria-hidden />
+      <span className="inline-block size-2 animate-pulse rounded-full bg-beige-200" aria-hidden />
       {text}
     </div>
   );
@@ -36,6 +36,8 @@ export interface RoomTab {
   channelId: string;
   label: string;
   hint?: string;
+  /** The room's display name in the chat header (lets it open without a directory lookup). */
+  name?: string;
 }
 
 type Phase = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message: string };
@@ -97,6 +99,7 @@ export function RoomView({
           appKey,
           container: containerRef.current,
           initialChannelId: initial,
+          knownGroups: rooms.filter((r) => r.name).map((r) => ({ groupId: r.channelId, name: r.name! })),
           cardActions: {
             canApprove: () => canApprove,
             approve: (versionId) => post(`/api/versions/${versionId}/approve`),

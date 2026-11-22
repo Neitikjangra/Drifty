@@ -140,7 +140,7 @@ export default function Home() {
                   Start free
                 </Link>
               </div>
-              <div className="bg-background rounded-lg border-2 border-slate-900 p-5 dark:border-slate-100">
+              <div className="bg-background rounded-lg border-2 border-dark-teal-500 p-5 dark:border-dark-teal-800">
                 <h3 className="font-semibold">Pilot</h3>
                 <p className="mt-1 text-3xl font-semibold">Let&apos;s talk</p>
                 <ul className="text-muted-foreground mt-4 space-y-1.5 text-sm">

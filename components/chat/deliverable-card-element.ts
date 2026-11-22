@@ -79,33 +79,33 @@ export function unwrap(value: unknown): SdkMessageLike | null {
 }
 
 const CHIP: Record<CardStatus, { bg: string; fg: string }> = {
-  draft: { bg: "#f1f5f9", fg: "#334155" },
-  in_review: { bg: "#fef3c7", fg: "#92400e" },
+  draft: { bg: "#dde7ea", fg: "#24343a" },
+  in_review: { bg: "#c9e197", fg: "#384915" },
   changes_requested: { bg: "#fee2e2", fg: "#991b1b" },
-  approved: { bg: "#dcfce7", fg: "#166534" },
-  superseded: { bg: "#f1f5f9", fg: "#64748b" },
+  approved: { bg: "#cedbcf", fg: "#1f2a20" },
+  superseded: { bg: "#eff3ef", fg: "#476874" },
 };
 
 const STYLE = `
-:host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a}
-.card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff}
+:host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif;color:#01161e}
+.card{border:1px solid #bdcebf;border-radius:12px;overflow:hidden;background:#fcfdf9}
 .card.old{opacity:.7}
-img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f8fafc}
-.file{display:flex;align-items:center;gap:8px;padding:14px 12px;background:#f8fafc;font-size:13px;color:#0f172a;text-decoration:none;border-bottom:1px solid #e2e8f0}
+img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f5f9ec}
+.file{display:flex;align-items:center;gap:8px;padding:14px 12px;background:#f5f9ec;font-size:13px;color:#01161e;text-decoration:none;border-bottom:1px solid #bdcebf}
 .body{padding:10px 12px;display:grid;gap:6px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .title{font-weight:600;font-size:14px;line-height:1.3}
-.ver{font-size:12px;color:#64748b}
-.copy{font-size:13px;color:#334155;line-height:1.4;white-space:pre-wrap}
+.ver{font-size:12px;color:#476874}
+.copy{font-size:13px;color:#24343a;line-height:1.4;white-space:pre-wrap}
 .chip{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap;transition:background .2s}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:8px;padding:9px 10px;background:#0f172a;color:#fff;min-height:20px}
-button.secondary{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:8px;padding:9px 10px;background:#124559;color:#fcfdf9;min-height:20px}
+button.secondary{background:#fcfdf9;color:#01161e;border:1px solid #aec3b0}
 button[disabled]{opacity:.55;cursor:default}
-textarea{box-sizing:border-box;width:100%;min-height:64px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit;font-size:14px;resize:vertical}
+textarea{box-sizing:border-box;width:100%;min-height:64px;border:1px solid #aec3b0;border-radius:8px;padding:8px;font:inherit;font-size:14px;resize:vertical}
 .err{font-size:12px;color:#b91c1c}
-.meta{font-size:12px;color:#166534}
-.muted{font-size:12px;color:#64748b}
+.meta{font-size:12px;color:#3e5441}
+.muted{font-size:12px;color:#476874}
 `;
 
 function el(tag: string, cls: string, text?: string) {
@@ -348,8 +348,8 @@ export function defineReceiptElement(): CustomElementConstructor {
       this._root.innerHTML = "";
       const style = document.createElement("style");
       style.textContent = `:host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif}
-.r{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:10px 12px;font-size:13px;color:#14532d;display:grid;gap:2px}
-.t{font-weight:600}.s{font-size:12px;color:#166534}`;
+.r{border:1px solid #aec3b0;background:#eff3ef;border-radius:12px;padding:10px 12px;font-size:13px;color:#1f2a20;display:grid;gap:2px}
+.t{font-weight:600}.s{font-size:12px;color:#3e5441}`;
       const box = el("div", "r");
       if (parsed.success) {
         const r = parsed.data;

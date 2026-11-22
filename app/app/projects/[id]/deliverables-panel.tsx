@@ -36,10 +36,10 @@ const LABEL: Record<DeliverableRow["status"], string> = {
   approved: "Approved",
 };
 const TONE: Record<DeliverableRow["status"], string> = {
-  draft: "bg-slate-100 text-slate-700",
-  in_review: "bg-amber-100 text-amber-900",
+  draft: "bg-air-force-blue-900 text-air-force-blue-200",
+  in_review: "bg-beige-400 text-beige-100",
   changes_requested: "bg-red-100 text-red-900",
-  approved: "bg-green-100 text-green-900",
+  approved: "bg-ash-grey-700 text-ash-grey-100",
 };
 
 /** Uploads straight to Supabase Storage through a one-time signed slot; returns the storage path. */
@@ -175,7 +175,7 @@ function NewDeliverableForm({
         <Input id="d-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </div>
       {!hasApprover && (
-        <p className="text-xs text-amber-700">No approver yet: the client can see the card, but nobody can approve it.</p>
+        <p className="text-xs text-beige-100">No approver yet: the client can see the card, but nobody can approve it.</p>
       )}
       {error && (
         <p className="text-sm text-red-600" role="alert">
@@ -287,7 +287,7 @@ function DeliverableItem({
         </Badge>
       </div>
       {item.approval && (
-        <p className="text-xs text-green-800">
+        <p className="text-xs text-ash-grey-200">
           Approved v{item.approval.version} by {item.approval.by},{" "}
           {new Date(item.approval.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </p>
@@ -299,7 +299,7 @@ function DeliverableItem({
             {summary.busy ? "Summarising… (up to 15 s)" : "Summarise feedback"}
           </Button>
           {summary.text && (
-            <p className={`text-xs ${summary.error ? "text-red-600" : "text-green-800"}`} role={summary.error ? "alert" : "status"}>
+            <p className={`text-xs ${summary.error ? "text-red-600" : "text-ash-grey-200"}`} role={summary.error ? "alert" : "status"}>
               {summary.text}
             </p>
           )}
@@ -362,7 +362,7 @@ function DriftStatus({
     );
   }
   if (drift.state === "back") {
-    return <p className="text-xs text-amber-800">Sent back to the creative. Upload v{drift.toVersion + 1} when it&apos;s ready.</p>;
+    return <p className="text-xs text-beige-100">Sent back to the creative. Upload v{drift.toVersion + 1} when it&apos;s ready.</p>;
   }
   if (drift.state !== "ready") return null;
   const c = drift.counts;
@@ -372,7 +372,7 @@ function DriftStatus({
         .join(" · ")
     : "";
   return (
-    <div className="space-y-2 rounded-md bg-slate-50 p-2">
+    <div className="space-y-2 rounded-md bg-secondary p-2">
       <p className="text-xs">
         <span className="font-medium">Drift check v{drift.toVersion}:</span> {summary}. Details in the Internal room.
       </p>

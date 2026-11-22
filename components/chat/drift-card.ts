@@ -54,14 +54,14 @@ export function defineDriftElement(): CustomElementConstructor {
       link.target = "_blank";
       link.rel = "noopener";
       link.textContent = `Open v${card.toVersion} ↗`;
-      link.style.cssText = "font-size:13px;color:#1d4ed8;font-weight:600";
+      link.style.cssText = "font-size:13px;color:#20799c;font-weight:600";
       link.addEventListener("click", (e) => e.stopPropagation());
       body.append(link);
       for (const r of card.results) {
         const row = el("div", "item");
         const top = el("div", "row");
         top.append(el("span", "tag", r.type));
-        const [label, bg, fg] = STATUS_CHIP[r.verdict] ?? [r.verdict, "#f1f5f9", "#334155"];
+        const [label, bg, fg] = STATUS_CHIP[r.verdict] ?? [r.verdict, "#eff3ef", "#24343a"];
         const chip = el("span", "chip", label);
         chip.style.background = bg;
         chip.style.color = fg;

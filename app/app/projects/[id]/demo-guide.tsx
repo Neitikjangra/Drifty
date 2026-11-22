@@ -116,7 +116,7 @@ export function DemoGuide({ projectId, progress }: { projectId: string; progress
   const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <details open={doneCount < steps.length} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:bg-amber-950/30">
+    <details open={doneCount < steps.length} className="rounded-lg border border-beige-400 bg-beige-500 p-3 text-sm dark:bg-dark-teal-300/40">
       <summary className="cursor-pointer font-medium">
         Demo guide · {doneCount} of {steps.length} done
       </summary>
@@ -124,7 +124,7 @@ export function DemoGuide({ projectId, progress }: { projectId: string; progress
         {steps.map((s, i) => (
           <li key={s.title} className="flex gap-2">
             <span
-              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${s.done ? "bg-green-600 text-white" : "bg-white text-slate-700 ring-1 ring-slate-300"}`}
+              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${s.done ? "bg-dark-teal-500 text-beige-900" : "bg-beige-900 text-air-force-blue-300 ring-1 ring-ash-grey-500"}`}
               aria-label={s.done ? "Done" : `Step ${i + 1}`}
             >
               {s.done ? "✓" : i + 1}

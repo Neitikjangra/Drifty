@@ -10,7 +10,7 @@ export const VOICE_EVENT = "drifty:voice";
 const MIC_ICON =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#124559" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
   );
 import {
   CARD_TAG,
@@ -38,6 +38,8 @@ export interface ChatHostOptions {
   /** Room to open first. */
   initialChannelId: string;
   cardActions: CardActions;
+  /** Room names the page already knows, so a room opens without waiting for the directory. */
+  knownGroups?: { groupId: string; name: string }[];
 }
 
 export interface ChatHostHandle {
@@ -169,9 +171,12 @@ const fetchToken = async () => (await postJson<{ token: string }>("/api/nexconn/
 
 async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   publish("connecting");
-  const token = await fetchToken();
-  const chat = await import("@nexconn/chat");
-  const { NCChatUIApplication, ChatUIEvents } = await import("@nexconn/chatui");
+  // Token and the (large) SDK bundles load in parallel: each one used to wait for the previous.
+  const [token, chat, { NCChatUIApplication, ChatUIEvents }] = await Promise.all([
+    fetchToken(),
+    import("@nexconn/chat"),
+    import("@nexconn/chatui"),
+  ]);
   const { NCEngine, LogLevel, MessageHandler, GroupChannelIdentifier, ConnectionStatusHandler } = chat;
 
   NCEngine.initialize({
@@ -316,8 +321,15 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   opts.container.replaceChildren(root);
   // Push the room's name first, so the header never shows the raw channel id on a new device.
   const openRoom = async (channelId: string) => {
-    const [g] = await dir.groups([channelId]);
-    if (g) app.updateGroupProfile(g);
+    const known = opts.knownGroups?.find((k) => k.groupId === channelId);
+    if (known) {
+      // Name known from the page: open now, fill in the member count when the directory answers.
+      app.updateGroupProfile({ groupId: known.groupId, name: known.name, memberCount: 0 });
+      void dir.groups([channelId]).then(([g]) => g && app.updateGroupProfile(g)).catch(() => {});
+    } else {
+      const [g] = await dir.groups([channelId]);
+      if (g) app.updateGroupProfile(g);
+    }
     return app.openChannel(new GroupChannelIdentifier(channelId), false);
   };
   // The room the user wants. A tab tapped while ChatUI is still mounting must win over the
@@ -334,7 +346,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     }
   };
   // Don't block start-up on this; the user can always tap the room in the list.
-  void openWanted(800).finally(() => (starting = false));
+  void openWanted(300).finally(() => (starting = false)); // retries cover a ChatUI that is still mounting
 
   return {
     async open(channelId) {

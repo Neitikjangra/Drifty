@@ -32,27 +32,23 @@ export async function POST(req: Request) {
     const projects = await projectsByChannelIds(
       input.membersOf ? [...input.groupIds, input.membersOf] : input.groupIds,
     );
-    const groups: { groupId: string; name: string; memberCount?: number }[] = [];
-    for (const p of projects) {
-      let canClient = false;
-      let canInternal = false;
-      if (caller.kind === "member") {
-        const same = caller.membership?.workspace.id === p.workspace_id;
-        canClient = same;
-        canInternal = same;
-      } else {
-        canClient = Boolean(await getGuestRole(p.id, caller.userId));
-      }
-      // +1 for the Drifty AI bot, which is in every room.
-      if (canClient && p.client_channel_id) {
-        const n = (await roomMembers(p.id, p.workspace_id, true)).length + 1;
-        groups.push({ groupId: p.client_channel_id, name: p.client_name, memberCount: n });
-      }
-      if (canInternal && p.internal_channel_id) {
-        const n = (await roomMembers(p.id, p.workspace_id, false)).length + 1;
-        groups.push({ groupId: p.internal_channel_id, name: `${p.client_name} · internal`, memberCount: n });
-      }
-    }
+    // Every lookup below is independent: run them in parallel (this route gates the chat header).
+    const perProject = await Promise.all(
+      projects.map(async (p) => {
+        const out: { groupId: string; name: string; memberCount?: number }[] = [];
+        const canClient = caller.kind === "member" ? caller.membership?.workspace.id === p.workspace_id : Boolean(await getGuestRole(p.id, caller.userId));
+        const canInternal = caller.kind === "member" && caller.membership?.workspace.id === p.workspace_id;
+        const [clientN, internalN] = await Promise.all([
+          canClient && p.client_channel_id ? roomMembers(p.id, p.workspace_id, true).then((m) => m.length) : Promise.resolve(-1),
+          canInternal && p.internal_channel_id ? roomMembers(p.id, p.workspace_id, false).then((m) => m.length) : Promise.resolve(-1),
+        ]);
+        // +1 for the Drifty AI bot, which is in every room.
+        if (clientN >= 0) out.push({ groupId: p.client_channel_id!, name: p.client_name, memberCount: clientN + 1 });
+        if (internalN >= 0) out.push({ groupId: p.internal_channel_id!, name: `${p.client_name} · internal`, memberCount: internalN + 1 });
+        return out;
+      }),
+    );
+    const groups = perProject.flat();
 
     const profiles = await getProfilesByNexconnIds(input.userIds.filter((u) => u !== BOT_USER_ID));
     const users = profiles.map((p) => ({ userId: p.nexconn_user_id, name: p.display_name }));

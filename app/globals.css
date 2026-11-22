@@ -49,72 +49,129 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Light theme from the brand palette. Text contrast on the beige background:
+     ink black ~18:1, dark teal ~10:1, air force blue 300 ~8:1 (all pass WCAG AA). */
+  --background: #f8fbf2; /* beige-800 */
+  --foreground: #01161e; /* ink black */
+  --card: #fcfdf9; /* beige-900 */
+  --card-foreground: #01161e;
+  --popover: #fcfdf9;
+  --popover-foreground: #01161e;
+  --primary: #124559; /* dark teal */
+  --primary-foreground: #fcfdf9;
+  --secondary: #eff6e0; /* beige */
+  --secondary-foreground: #124559;
+  --muted: #dee7df; /* ash grey 800 */
+  --muted-foreground: #354e57; /* air force blue 300 */
+  --accent: #eff3ef; /* ash grey 900 */
+  --accent-foreground: #124559;
+  --destructive: #b42318;
+  --border: #bdcebf; /* ash grey 600 */
+  --input: #bdcebf;
+  --ring: #20799c; /* dark teal 600 */
+  --chart-1: #124559;
+  --chart-2: #598392;
+  --chart-3: #aec3b0;
+  --chart-4: #20799c;
+  --chart-5: #a4cc4e;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #eff6e0;
+  --sidebar-foreground: #01161e;
+  --sidebar-primary: #124559;
+  --sidebar-primary-foreground: #fcfdf9;
+  --sidebar-accent: #dee7df;
+  --sidebar-accent-foreground: #124559;
+  --sidebar-border: #bdcebf;
+  --sidebar-ring: #20799c;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #01161e; /* ink black */
+  --foreground: #eff6e0; /* beige */
+  --card: #011118; /* ink black 400 */
+  --card-foreground: #eff6e0;
+  --popover: #011118;
+  --popover-foreground: #eff6e0;
+  --primary: #79c5e4; /* dark teal 800 */
+  --primary-foreground: #01161e;
+  --secondary: #0f3747; /* dark teal 400 */
+  --secondary-foreground: #eff6e0;
+  --muted: #0b2935; /* dark teal 300 */
+  --muted-foreground: #99b6c0; /* air force blue 700 */
+  --accent: #124559;
+  --accent-foreground: #eff6e0;
+  --destructive: #f97066;
+  --border: #24343a; /* air force blue 200 */
+  --input: #354e57;
+  --ring: #36a9d6;
+  --chart-1: #79c5e4;
+  --chart-2: #99b6c0;
+  --chart-3: #aec3b0;
+  --chart-4: #36a9d6;
+  --chart-5: #c9e197;
+  --sidebar: #011118;
+  --sidebar-foreground: #eff6e0;
+  --sidebar-primary: #79c5e4;
+  --sidebar-primary-foreground: #01161e;
+  --sidebar-accent: #0f3747;
+  --sidebar-accent-foreground: #eff6e0;
+  --sidebar-border: #24343a;
+  --sidebar-ring: #36a9d6;
+}
+
+/* Brand palette (ink black, dark teal, air force blue, ash grey, beige) as Tailwind colours,
+   e.g. bg-dark-teal-500, text-air-force-blue-300. */
+@theme {
+  --color-ink-black: #01161e;
+  --color-ink-black-100: #000406;
+  --color-ink-black-200: #00090c;
+  --color-ink-black-300: #010d12;
+  --color-ink-black-400: #011118;
+  --color-ink-black-500: #01161e;
+  --color-ink-black-600: #04597b;
+  --color-ink-black-700: #079cd8;
+  --color-ink-black-800: #45c6f9;
+  --color-ink-black-900: #a2e3fc;
+  --color-dark-teal: #124559;
+  --color-dark-teal-100: #040e12;
+  --color-dark-teal-200: #071c24;
+  --color-dark-teal-300: #0b2935;
+  --color-dark-teal-400: #0f3747;
+  --color-dark-teal-500: #124559;
+  --color-dark-teal-600: #20799c;
+  --color-dark-teal-700: #36a9d6;
+  --color-dark-teal-800: #79c5e4;
+  --color-dark-teal-900: #bce2f1;
+  --color-air-force-blue: #598392;
+  --color-air-force-blue-100: #121a1d;
+  --color-air-force-blue-200: #24343a;
+  --color-air-force-blue-300: #354e57;
+  --color-air-force-blue-400: #476874;
+  --color-air-force-blue-500: #598392;
+  --color-air-force-blue-600: #769dab;
+  --color-air-force-blue-700: #99b6c0;
+  --color-air-force-blue-800: #bbced5;
+  --color-air-force-blue-900: #dde7ea;
+  --color-ash-grey: #aec3b0;
+  --color-ash-grey-100: #1f2a20;
+  --color-ash-grey-200: #3e5441;
+  --color-ash-grey-300: #5e7f61;
+  --color-ash-grey-400: #83a386;
+  --color-ash-grey-500: #aec3b0;
+  --color-ash-grey-600: #bdcebf;
+  --color-ash-grey-700: #cedbcf;
+  --color-ash-grey-800: #dee7df;
+  --color-ash-grey-900: #eff3ef;
+  --color-beige: #eff6e0;
+  --color-beige-100: #384915;
+  --color-beige-200: #71912a;
+  --color-beige-300: #a4cc4e;
+  --color-beige-400: #c9e197;
+  --color-beige-500: #eff6e0;
+  --color-beige-600: #f2f8e6;
+  --color-beige-700: #f5f9ec;
+  --color-beige-800: #f8fbf2;
+  --color-beige-900: #fcfdf9;
 }
 
 @layer base {

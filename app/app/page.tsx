@@ -82,7 +82,7 @@ async function Projects() {
               >
                 <p className="truncate font-medium">
                   {p.client_name}
-                  {p.is_demo && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-900">DEMO</span>}
+                  {p.is_demo && <span className="ml-2 rounded bg-beige-400 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-beige-100">DEMO</span>}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Created {new Date(p.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}

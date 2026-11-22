@@ -148,7 +148,7 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
           </ul>
         )}
         {props.members.length > 0 && !props.approverId && (
-          <p className="text-xs text-amber-700">Nobody can approve yet. Mark one person as the approver.</p>
+          <p className="text-xs text-beige-100">Nobody can approve yet. Mark one person as the approver.</p>
         )}
       </section>
 

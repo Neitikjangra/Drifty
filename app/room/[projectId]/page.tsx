@@ -44,7 +44,7 @@ async function GuestRoom({ params }: { params: PageProps<"/room/[projectId]">["p
       </header>
       <RoomView
         appKey={appKey}
-        rooms={[{ channelId: access.project.client_channel_id, label: "Room" }]}
+        rooms={[{ channelId: access.project.client_channel_id, label: "Room", name: access.project.client_name }]}
         className="flex-1"
         canApprove={isProjectApprover(access, access.project)}
         projectId={access.project.id}

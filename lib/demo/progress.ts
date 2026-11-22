@@ -32,11 +32,11 @@ export async function demoProgress(projectId: string): Promise<DemoProgress> {
   const itemRows = ((items as { data: unknown[] | null }).data ?? []) as { status: string }[];
   const alertRows = ((alerts as { data: unknown[] | null }).data ?? []) as { kind: string; resolved_at: string | null; detail: { decision?: string } }[];
   const feedback = alertRows.filter((a) => a.kind === "feedback");
-  const links = [];
-  for (const i of ((invites.data ?? []) as { id: string; display_name: string | null; role: string }[])) {
-    const link = await inviteLink(i.id);
-    if (link) links.push({ name: i.display_name ?? "Client", role: i.role, path: new URL(link).pathname });
-  }
+  const rows = (invites.data ?? []) as { id: string; display_name: string | null; role: string }[];
+  const resolved = await Promise.all(rows.map(async (i) => ({ i, link: await inviteLink(i.id) })));
+  const links = resolved
+    .filter((r) => r.link)
+    .map(({ i, link }) => ({ name: i.display_name ?? "Client", role: i.role, path: new URL(link!).pathname }));
   return {
     summarised: ((lists as { count: number | null }).count ?? 0) > 0,
     // No conflict found means nothing to settle: the step counts as done once summarised.

@@ -48,7 +48,7 @@ export function ProjectDashboard({ projectId, data, canManage }: { projectId: st
                 </span>
                 <span className="text-muted-foreground shrink-0 text-xs">
                   {r.openItems ? `${r.openItems} open · ` : ""}
-                  <span className={r.overLimit ? "font-medium text-amber-800" : ""}>
+                  <span className={r.overLimit ? "font-medium text-beige-100" : ""}>
                     {r.rounds}/{data.roundsIncluded} rounds
                   </span>{" "}
                   · waiting: {WAIT[r.waitingOn]}
@@ -69,7 +69,7 @@ export function ProjectDashboard({ projectId, data, canManage }: { projectId: st
 
 function Tile({ label, value, tone, children }: { label: string; value: number | string; tone?: "warn"; children: React.ReactNode }) {
   return (
-    <div className={`rounded-md p-2 ${tone === "warn" ? "bg-amber-50" : "bg-muted/40"}`}>
+    <div className={`rounded-md p-2 ${tone === "warn" ? "bg-beige-400/60" : "bg-muted/40"}`}>
       <p className="text-muted-foreground text-xs">{label}</p>
       <p className="text-xl font-semibold tabular-nums">{value}</p>
       <div className="text-muted-foreground text-xs">{children}</div>

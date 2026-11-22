@@ -13,39 +13,39 @@ export const CHANGELIST_TAG = "drifty-changelist";
 export const CONFLICT_TAG = "drifty-conflict";
 
 export const BASE = `
-:host{display:block;max-width:340px;font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a}
-.card{border:1px solid #e2e8f0;border-radius:12px;background:#fff;overflow:hidden}
-.hd{padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:13px}
+:host{display:block;max-width:340px;font-family:ui-sans-serif,system-ui,sans-serif;color:#01161e}
+.card{border:1px solid #bdcebf;border-radius:12px;background:#fcfdf9;overflow:hidden}
+.hd{padding:10px 12px;background:#f5f9ec;border-bottom:1px solid #bdcebf;font-size:13px}
 .hd b{display:block;font-size:14px}
-.muted{color:#64748b;font-size:12px}
+.muted{color:#476874;font-size:12px}
 .body{padding:8px 12px;display:grid;gap:8px}
-.item{border:1px solid #e2e8f0;border-radius:10px;padding:8px;display:grid;gap:4px}
+.item{border:1px solid #bdcebf;border-radius:10px;padding:8px;display:grid;gap:4px}
 .item.rejected{opacity:.55}
 .row{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .txt{font-size:13px;line-height:1.4}
 .item.rejected .txt{text-decoration:line-through}
-.tag{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;background:#f1f5f9;color:#334155;white-space:nowrap}
+.tag{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;background:#eff3ef;color:#24343a;white-space:nowrap}
 .chip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;white-space:nowrap}
-.src{font-size:12px;color:#475569;border-left:3px solid #cbd5e1;padding-left:6px;font-style:italic}
+.src{font-size:12px;color:#354e57;border-left:3px solid #aec3b0;padding-left:6px;font-style:italic}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
-button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:13px;font-weight:600;border-radius:8px;padding:6px 10px;background:#0f172a;color:#fff}
-button.secondary{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:13px;font-weight:600;border-radius:8px;padding:6px 10px;background:#124559;color:#fcfdf9}
+button.secondary{background:#fcfdf9;color:#01161e;border:1px solid #aec3b0}
 button.full{width:100%;padding:9px 10px;font-size:14px}
 button[disabled]{opacity:.55;cursor:default}
-input,textarea{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}
+input,textarea{box-sizing:border-box;width:100%;border:1px solid #aec3b0;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}
 .err{font-size:12px;color:#b91c1c}
-.ok{font-size:12px;color:#166534}
+.ok{font-size:12px;color:#3e5441}
 `;
 
 export const STATUS_CHIP: Record<string, [string, string, string]> = {
-  suggested: ["Suggested", "#fef3c7", "#92400e"],
-  confirmed: ["Confirmed", "#dcfce7", "#166534"],
-  rejected: ["Rejected", "#f1f5f9", "#64748b"],
+  suggested: ["Suggested", "#c9e197", "#384915"],
+  confirmed: ["Confirmed", "#cedbcf", "#1f2a20"],
+  rejected: ["Rejected", "#eff3ef", "#476874"],
   // Round 4 drift check verdicts
-  done: ["Done", "#dcfce7", "#166534"],
+  done: ["Done", "#cedbcf", "#1f2a20"],
   missing: ["Missing", "#fee2e2", "#991b1b"],
   reversed: ["Reversed", "#fee2e2", "#991b1b"],
-  needs_check: ["Check by eye", "#e0e7ff", "#3730a3"],
+  needs_check: ["Check by eye", "#dde7ea", "#24343a"],
 };
 /** After a drift check the item is the version's business: no confirm/reject buttons. */
 const CHECKED = new Set(["done", "missing", "reversed", "needs_check"]);
@@ -171,7 +171,7 @@ export function defineChangeListElement(): CustomElementConstructor {
         const row = el("div", `item ${status}`);
         const top = el("div", "row");
         top.append(el("span", "tag", it.type === "question" ? "Question" : it.type));
-        const [label, bg, fg] = STATUS_CHIP[status] ?? [status, "#f1f5f9", "#334155"];
+        const [label, bg, fg] = STATUS_CHIP[status] ?? [status, "#eff3ef", "#24343a"];
         const chip = el("span", "chip", label);
         chip.style.background = bg;
         chip.style.color = fg;
