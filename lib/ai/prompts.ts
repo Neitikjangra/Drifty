@@ -73,3 +73,37 @@ export function ai3Prompt(input: {
       : "No images are available to compare.",
   ].join("\n");
 }
+
+export const AI4_SYSTEM =
+  "You are a pre-flight check for a creative agency. Before a draft goes to the client, predict the feedback THIS client " +
+  "is likely to give, so the team can fix it first. Use only three sources: the brief, the brand rules, and the client's " +
+  "past change requests (their taste). Every prediction must be tied to one of them; say which in 'basis' and point at it " +
+  "in 'evidence'. A past request counts when the new draft repeats the same kind of problem (e.g. they asked for a bigger " +
+  "logo before and the logo is small again). Look at the image for visual and layout points; compare copy word for word. " +
+  "Don't list something the draft already gets right. Don't give generic design, grammar or style advice the sources don't " +
+  "support. Past requests may be in Hinglish; write predictions in plain English. 'high' = clearly breaks a rule or repeats " +
+  "a past complaint; otherwise 'medium'. At most 5 predictions, most likely first; an empty list is a good answer.";
+
+export function ai4Prompt(input: {
+  title: string;
+  version: number;
+  copy: string;
+  brief: string;
+  brandRules: string;
+  memory: { text: string; type: string; where: string }[];
+  image: boolean;
+}): string {
+  return [
+    `Deliverable: ${input.title}. This draft would go to the client as v${input.version}.`,
+    "",
+    `Brief: ${input.brief || "(none)"}`,
+    "",
+    `Brand rules: ${input.brandRules || "(none)"}`,
+    "",
+    input.memory.length ? "This client's past change requests, newest first, one JSON object per line:" : "Past change requests: (none yet)",
+    ...input.memory.map((m) => JSON.stringify({ request: m.text, type: m.type, on: m.where })),
+    "",
+    `Draft copy: ${input.copy || "(none)"}`,
+    input.image ? "The draft image follows." : "No image is available; judge copy only and skip visual points.",
+  ].join("\n");
+}

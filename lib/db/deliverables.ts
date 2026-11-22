@@ -82,7 +82,7 @@ export async function getVersionByNumber(deliverableId: string, n: number): Prom
   ) as Version | null;
 }
 
-export async function insertDeliverable(row: { project_id: string; title: string; due_date: string | null }): Promise<Deliverable> {
+export async function insertDeliverable(row: { project_id: string; title: string; due_date: string | null; brief?: string }): Promise<Deliverable> {
   return check(
     "insertDeliverable",
     await supabaseAdmin().from("deliverables").insert({ ...row, status: "in_review", current_version: 1 }).select(D_COLS).single(),

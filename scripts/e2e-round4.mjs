@@ -245,5 +245,24 @@ const off = await am.req("/api/push/subscribe", { method: "DELETE", body: { endp
 const { data: left } = await admin.from("push_subscriptions").select("endpoint").eq("endpoint", amSub.endpoint);
 check("AM turns alerts off", off.status === 200 && left?.length === 0, `${off.status}`);
 await admin.from("push_subscriptions").delete().like("endpoint", "https://push.example.invalid/%");
+
+// Pre-flight check (AI-4): predicts this client's feedback before a draft is sent
+const brand = await am.req(`/api/projects/${projectId}`, { method: "PATCH", body: { brandRules: "Every post must end with the call to action 'Order on WhatsApp'. Never say 'Buy now'." } });
+check("AM saves brand rules", brand.status === 200, `${brand.status}`);
+check("client can't change brand rules", (await approver.req(`/api/projects/${projectId}`, { method: "PATCH", body: { brandRules: "x" } })).status !== 200);
+const pfPath = await uploadPng();
+const pfStart = Date.now();
+const pf = await am.req("/api/preflight", { method: "POST", body: { projectId, title: "Weekend offer", brief: "Weekend 10% off post", copy: "Weekend sale. Buy now.", assetPath: pfPath } });
+const pfMs = Date.now() - pfStart;
+check("pre-flight runs on a new draft", pf.status === 200 && ["ok", "ai_unavailable"].includes(pf.json?.state), `${pf.status} ${pf.text.slice(0, 160)}`);
+check("pre-flight used the AI", pf.json?.state === "ok", `${pf.json?.state} ${pf.json?.error ?? ""}`);
+check("pre-flight flags the brand-rule break ('Buy now' / CTA)", (pf.json?.predictions ?? []).some((p) => p.basis === "brand_rules" || /buy now|call to action|cta|whatsapp/i.test(p.feedback + p.evidence)), JSON.stringify(pf.json?.predictions ?? []).slice(0, 300));
+check("pre-flight answers within 30 s", pfMs < 30_000, `${(pfMs / 1000).toFixed(1)} s`);
+check("pre-flight remembers this client's past requests", (pf.json?.memoryCount ?? 0) > 0, `${pf.json?.memoryCount}`);
+const { data: pfRows } = await admin.from("preflight_checks").select("id, predictions").eq("project_id", projectId);
+check("pre-flight run is recorded (team only)", (pfRows?.length ?? 0) >= 1);
+check("client can't run pre-flight", [403, 404].includes((await approver.req("/api/preflight", { method: "POST", body: { projectId, title: "x", copy: "", assetPath: pfPath } })).status));
+check("anonymous can't run pre-flight", (await stranger.req("/api/preflight", { method: "POST", body: { projectId, title: "x", copy: "", assetPath: pfPath } })).status === 401);
+check("pre-flight refuses another project's file", (await am.req("/api/preflight", { method: "POST", body: { projectId, title: "x", copy: "", assetPath: "00000000-0000-0000-0000-000000000000/11111111-1111-1111-1111-111111111111.png" } })).status === 400);
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

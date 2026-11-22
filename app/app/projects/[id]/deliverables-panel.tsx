@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { apiJson } from "@/lib/client-fetch";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 import { ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/deliverables/rules";
+import { PreflightButton, PreflightPanel, usePreflight } from "./preflight";
 
 export interface DeliverableRow {
   id: string;
@@ -124,10 +125,19 @@ function NewDeliverableForm({
   const [title, setTitle] = useState("");
   const [copy, setCopy] = useState("");
   const [due, setDue] = useState("");
+  const [brief, setBrief] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<"" | "uploading" | "posting">("");
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const pf = usePreflight(projectId, uploadFile);
+
+  function preflight() {
+    if (!title.trim()) return setError("Give the deliverable a title.");
+    if (!file) return setError("Choose the draft file.");
+    setError("");
+    void pf.run({ file, copy, title, brief });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -136,14 +146,16 @@ function NewDeliverableForm({
     setError("");
     try {
       setBusy("uploading");
-      const assetPath = await uploadFile(projectId, file);
+      const assetPath = await pf.pathFor(file);
       setBusy("posting");
-      await apiJson("/api/deliverables", { body: { projectId, title, copy, dueDate: due || null, assetPath } });
+      await apiJson("/api/deliverables", { body: { projectId, title, copy, brief, dueDate: due || null, assetPath } });
       formRef.current?.reset();
       setTitle("");
       setCopy("");
       setDue("");
+      setBrief("");
       setFile(null);
+      pf.reset();
       onDone();
       router.refresh();
     } catch (err) {
@@ -159,18 +171,44 @@ function NewDeliverableForm({
         <Label htmlFor="d-title">Title</Label>
         <Input id="d-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Diwali post 1" />
       </div>
-      <FilePicker id="d-file" file={file} onPick={setFile} />
+      <FilePicker
+        id="d-file"
+        file={file}
+        onPick={(f) => {
+          setFile(f);
+          pf.reset();
+        }}
+      />
       <div className="space-y-1.5">
         <Label htmlFor="d-copy">Caption / copy</Label>
         <textarea
           id="d-copy"
           value={copy}
-          onChange={(e) => setCopy(e.target.value)}
+          onChange={(e) => {
+            setCopy(e.target.value);
+            pf.reset();
+          }}
           maxLength={5000}
           rows={3}
           className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="Light up your Diwali with 20% off…"
         />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="d-brief">Brief (optional)</Label>
+        <textarea
+          id="d-brief"
+          value={brief}
+          onChange={(e) => {
+            setBrief(e.target.value);
+            pf.reset();
+          }}
+          maxLength={2000}
+          rows={2}
+          className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+          placeholder="Diwali offer post for Instagram, 20% off, festive but on-brand…"
+        />
+        <p className="text-muted-foreground text-xs">Team only. The pre-flight check compares the draft with it.</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="d-due">Due date (optional)</Label>
@@ -184,9 +222,11 @@ function NewDeliverableForm({
           {error}
         </p>
       )}
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1" disabled={busy !== ""}>
-          {busy === "uploading" ? "Uploading…" : busy === "posting" ? "Posting card…" : "Post to client room"}
+      <PreflightPanel busy={pf.busy} result={pf.result} error={pf.error} />
+      <div className="flex flex-wrap gap-2">
+        <PreflightButton busy={pf.busy} disabled={busy !== ""} onClick={preflight} />
+        <Button type="submit" className="flex-1" disabled={busy !== "" || pf.busy}>
+          {busy === "uploading" ? "Uploading…" : busy === "posting" ? "Posting card…" : pf.found ? "Post anyway" : "Post to client room"}
         </Button>
         {canCancel && (
           <Button type="button" variant="ghost" onClick={onDone} disabled={busy !== ""}>
@@ -304,6 +344,13 @@ function DeliverableItem({
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<"" | "uploading" | "posting">("");
   const [error, setError] = useState("");
+  const pf = usePreflight(projectId, uploadFile);
+
+  function preflight() {
+    if (!file) return setError("Choose the new version's file.");
+    setError("");
+    void pf.run({ file, copy, deliverableId: item.id });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -311,11 +358,12 @@ function DeliverableItem({
     setError("");
     try {
       setBusy("uploading");
-      const assetPath = await uploadFile(projectId, file);
+      const assetPath = await pf.pathFor(file);
       setBusy("posting");
       await apiJson(`/api/deliverables/${item.id}/versions`, { body: { copy, assetPath } });
       setOpen(false);
       setFile(null);
+      pf.reset();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't upload the new version.");
@@ -364,26 +412,38 @@ function DeliverableItem({
       )}
       {open && (
         <form onSubmit={submit} className="bg-muted/40 space-y-3 rounded-md border p-3" noValidate>
-          <FilePicker id={`v-file-${item.id}`} file={file} onPick={setFile} />
+          <FilePicker
+            id={`v-file-${item.id}`}
+            file={file}
+            onPick={(f) => {
+              setFile(f);
+              pf.reset();
+            }}
+          />
           <div className="space-y-1.5">
             <Label htmlFor={`v-copy-${item.id}`}>Caption / copy</Label>
             <textarea
               id={`v-copy-${item.id}`}
               value={copy}
-              onChange={(e) => setCopy(e.target.value)}
+              onChange={(e) => {
+                setCopy(e.target.value);
+                pf.reset();
+              }}
               maxLength={5000}
               rows={3}
               className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
             />
           </div>
+          <PreflightPanel busy={pf.busy} result={pf.result} error={pf.error} />
           {error && (
             <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           )}
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" className="flex-1" disabled={busy !== ""}>
-              {busy === "uploading" ? "Uploading…" : busy === "posting" ? "Posting…" : `Post v${item.version + 1}`}
+          <div className="flex flex-wrap gap-2">
+            <PreflightButton busy={pf.busy} disabled={busy !== ""} onClick={preflight} />
+            <Button type="submit" size="sm" className="flex-1" disabled={busy !== "" || pf.busy}>
+              {busy === "uploading" ? "Uploading…" : busy === "posting" ? "Posting…" : pf.found ? `Post v${item.version + 1} anyway` : `Post v${item.version + 1}`}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy !== ""}>
               Cancel

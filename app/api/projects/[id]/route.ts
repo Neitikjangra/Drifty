@@ -14,8 +14,9 @@ const body = z
     approverId: z.uuid().optional(),
     roundsIncluded: z.number().int().min(1).max(20).optional(),
     archived: z.boolean().optional(),
+    brandRules: z.string().trim().max(4000).optional(),
   })
-  .refine((b) => b.approverId !== undefined || b.roundsIncluded !== undefined || b.archived !== undefined);
+  .refine((b) => b.approverId !== undefined || b.roundsIncluded !== undefined || b.archived !== undefined || b.brandRules !== undefined);
 
 /** PATCH /api/projects/:id: set the approver (a guest of this project), rounds, or archive/restore. Owner/AM only. */
 export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]">) {
@@ -57,6 +58,10 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
     if (input.roundsIncluded !== undefined) {
       const res = await supabaseAdmin().from("projects").update({ rounds_included: input.roundsIncluded }).eq("id", id);
       if (res.error) throw new Error("update rounds failed");
+    }
+    if (input.brandRules !== undefined) {
+      const res = await supabaseAdmin().from("projects").update({ brand_rules: input.brandRules }).eq("id", id);
+      if (res.error) throw new Error("update brand rules failed");
     }
     return ok();
   } catch (err) {

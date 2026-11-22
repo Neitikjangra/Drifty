@@ -1,5 +1,22 @@
 # Changelog
 
+## Market-ready: report, alerts, pre-flight check (2026-11-23)
+
+- **Monthly client report:** Project → Monthly report →. Shows approvals, rounds, turnaround,
+  changes captured and drifts caught for one month (India time). Save as PDF, or share a short
+  summary in the client room as your own message.
+- **Push notifications:** a bell in the top bar and in the client room. The team gets an alert
+  for client feedback, approvals and change requests; clients get one when a version is ready or
+  the team replies. Alerts never show message text. On iPhone, add Drifty to the Home Screen first.
+  Opening an invite on a browser that's signed in to the agency now offers to sign out and open the
+  room; clients opening the installed app go straight to their room or can paste their link.
+- **Pre-flight check (AI-4):** before you post a draft or a new version, tap **Pre-flight check**.
+  The AI compares the draft (image and copy) with the brief, the client's brand rules and the
+  change requests they made before, and lists the feedback they're likely to give, each with its
+  evidence. Team only; it never posts to the client. Add brand rules under **Brand rules & taste**
+  on the project and a brief on each new deliverable.
+- **All suites:** 84 unit tests; E2E Round 1: 70, Round 3: 33, Round 4: 61, all passing.
+
 ## Pre-submission audit (2026-11-22)
 
 - **AI was down in production:** the Gemini key is on the Free Tier, and its *daily* quota was

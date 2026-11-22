@@ -35,6 +35,15 @@ const GUIDES = [
     ],
   },
   {
+    q: "Catch feedback before the client gives it",
+    steps: [
+      "Add the client's rules under Brand rules & taste on the project (logo, colours, words to avoid).",
+      "When you post a draft or a new version, tap Pre-flight check first. Add a brief on new deliverables for a better check.",
+      "Drifty lists what this client is likely to say, based on the brief, the rules and what they asked for before. Fix it, or post anyway.",
+      "Only your team sees the check. The client never does.",
+    ],
+  },
+  {
     q: "Approvals and the ledger",
     steps: [
       "Only the approver you named can tap Approve on a card.",

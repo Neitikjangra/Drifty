@@ -15,6 +15,8 @@ import { canUploadVersions } from "@/lib/auth/permissions";
 import { latestVersionAlerts, type VersionAlert } from "@/lib/drift/check";
 import { loadDashboard } from "@/lib/dashboard/load";
 import { ProjectDashboard } from "./project-dashboard";
+import { BrandRulesPanel } from "./brand-rules-panel";
+import { loadBrandRules, loadTasteMemory } from "@/lib/preflight/run";
 import { TimeSavedCard } from "@/components/time-saved-card";
 import { loadTimeSaved } from "@/lib/dashboard/time-saved-load";
 import { InternalSummariseBar } from "@/components/chat/internal-summarise";
@@ -183,10 +185,12 @@ async function TopPanels({ project, canManage }: { project: Project; canManage: 
 }
 
 async function SidePanels({ project, canManage, canUpload }: { project: Project; canManage: boolean; canUpload: boolean }) {
-  const [guests, invites, deliverables] = await Promise.all([
+  const [guests, invites, deliverables, brandRules, memory] = await Promise.all([
     listGuests(project.id),
     canManage ? listInvites(project.id) : [],
     getDeliverables(project.id),
+    canUpload ? loadBrandRules(project.id) : Promise.resolve(""),
+    canUpload ? loadTasteMemory(project.id).catch(() => []) : Promise.resolve([]),
   ]);
   const alerts = await latestVersionAlerts(deliverables.map((d) => d.id));
   const nameOf = new Map(guests.map((g) => [g.user_id, g.display_name]));
@@ -208,6 +212,7 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
   return (
     <>
       <DeliverablesPanel projectId={project.id} clientChannelId={project.client_channel_id} canCreate={canManage} canUpload={canUpload} hasApprover={Boolean(project.approver_id)} items={deliverableRows} />
+      {canUpload && <BrandRulesPanel projectId={project.id} rules={brandRules} memoryCount={memory.length} canEdit={canManage} />}
       <PeoplePanel projectId={project.id} projectName={project.client_name} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
     </>
   );

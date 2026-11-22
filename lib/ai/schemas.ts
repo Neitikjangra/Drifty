@@ -105,3 +105,42 @@ export const driftJsonSchema = {
   },
   required: ["results"],
 } as const;
+
+/** AI-4 pre-flight output: feedback this client is likely to give, each tied to its evidence. */
+export const PREFLIGHT_AREAS = ["copy", "visual", "layout", "brand", "other"] as const;
+export const PREFLIGHT_BASES = ["brief", "brand_rules", "past_feedback"] as const;
+export const preflightSchema = z.object({
+  predictions: z
+    .array(
+      z.object({
+        feedback: z.string().min(1).max(300),
+        area: z.enum(PREFLIGHT_AREAS),
+        basis: z.enum(PREFLIGHT_BASES),
+        evidence: z.string().max(400),
+        likelihood: z.enum(["high", "medium"]),
+      }),
+    )
+    .max(10),
+});
+export type PreflightOutput = z.infer<typeof preflightSchema>;
+
+export const preflightJsonSchema = {
+  type: "object",
+  properties: {
+    predictions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          feedback: { type: "string", description: "What the client is likely to say, short, e.g. 'Logo too small on phone'." },
+          area: { type: "string", enum: [...PREFLIGHT_AREAS] },
+          basis: { type: "string", enum: [...PREFLIGHT_BASES], description: "what this prediction comes from" },
+          evidence: { type: "string", description: "one short sentence pointing at the brief line, brand rule or past request" },
+          likelihood: { type: "string", enum: ["high", "medium"] },
+        },
+        required: ["feedback", "area", "basis", "evidence", "likelihood"],
+      },
+    },
+  },
+  required: ["predictions"],
+} as const;

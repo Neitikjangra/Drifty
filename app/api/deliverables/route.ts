@@ -14,6 +14,7 @@ const body = z.object({
   title: z.string().trim().min(1).max(120),
   copy: z.string().max(5000).default(""),
   dueDate: z.iso.date().nullable().optional(),
+  brief: z.string().trim().max(2000).default(""),
   assetPath: z.string().max(200),
 });
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     if (!access.project.client_channel_id) return jsonError(409, "This project's client room isn't ready.");
 
     const asset = await inspectUpload(input.projectId, input.assetPath);
-    const d = await insertDeliverable({ project_id: input.projectId, title: input.title, due_date: input.dueDate ?? null });
+    const d = await insertDeliverable({ project_id: input.projectId, title: input.title, due_date: input.dueDate ?? null, brief: input.brief });
     try {
       const v = await insertVersion({
         deliverable_id: d.id,
