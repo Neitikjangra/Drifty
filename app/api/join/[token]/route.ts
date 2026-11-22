@@ -31,7 +31,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/join/[token]">)
     const limited = await rateLimit(req, "join", LIMITS.join);
     if (limited) return limited;
     if (await getAgencyUser()) {
-      return jsonError(409, "You're signed in as an agency user. Open this link in a private window or on the client's device.");
+      return jsonError(409, "You're signed in as an agency user on this browser. Sign out of it to open the client room here.");
     }
     const resolved = await resolveInvite(token);
     if (resolved.state !== "ok") return jsonError(410, MESSAGES[resolved.state]);

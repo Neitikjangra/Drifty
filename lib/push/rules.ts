@@ -45,5 +45,6 @@ export function pushCopy(e: PushEvent): PushPayload {
   }
 }
 
-/** Chat messages notify at most once per project and direction in this window (seconds). */
-export const CHAT_PUSH_WINDOW_SEC = 300;
+/** Chat messages notify at most once per project and direction in this window (seconds): every
+ * message alerts, but a rapid burst (several messages within a few seconds) buzzes once. */
+export const CHAT_PUSH_WINDOW_SEC = 10;

@@ -220,7 +220,7 @@ check("AM sets rounds included", rounds.status === 200, `${rounds.status} ${roun
 const istNow = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 7);
 const rep = await am.req(`/app/projects/${projectId}/report?month=${istNow}`);
 const repText = rep.text.replace(/<!-- -->/g, "");
-check("monthly report renders with this month's approval", rep.status === 200 && repText.includes("Monthly client report") && repText.includes("Deliverables approved"), `${rep.status}`);
+check("monthly report renders with this month's approval", rep.status === 200 && repText.includes("Monthly client report") && repText.includes("Deliverables approved"), `${rep.status} ${repText.includes("Nothing happened") ? "empty" : repText.includes("Building the report") ? "fallback-only" : "other"}`);
 const empty = await am.req(`/app/projects/${projectId}/report?month=2020-01`);
 check("empty month says nothing happened", empty.text.replace(/<!-- -->/g, "").includes("Nothing happened in this project"));
 const share = await am.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: istNow } });

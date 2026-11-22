@@ -7,6 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiJson } from "@/lib/client-fetch";
 
+const AGENCY_SESSION = "signed in as an agency user";
+
+/** Shown when this browser is signed in to an agency account: sign out here, then open the room. */
+function AgencySignOut({ token }: { token: string }) {
+  return (
+    <form method="post" action={`/auth/signout?next=${encodeURIComponent(`/join/${token}`)}`} className="space-y-2">
+      <Button type="submit" className="h-11 w-full text-base">
+        Sign out of the agency account and open the room
+      </Button>
+      <p className="text-muted-foreground text-xs">Or open this link in a private window to stay signed in.</p>
+    </form>
+  );
+}
+
 export function JoinForm(props: {
   token: string;
   agencyName: string;
@@ -64,9 +78,13 @@ export function JoinForm(props: {
             <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
-            <Button className="h-11 w-full text-base" onClick={() => void join()} disabled={busy}>
-              Try again
-            </Button>
+            {error.includes(AGENCY_SESSION) ? (
+              <AgencySignOut token={props.token} />
+            ) : (
+              <Button className="h-11 w-full text-base" onClick={() => void join()} disabled={busy}>
+                Try again
+              </Button>
+            )}
           </>
         ) : (
           <p className="text-muted-foreground text-sm">Opening {props.projectName}…</p>
@@ -95,9 +113,13 @@ export function JoinForm(props: {
           {error}
         </p>
       )}
-      <Button type="submit" className="h-11 w-full text-base" disabled={busy}>
-        {busy ? "Opening your room…" : "Join the room"}
-      </Button>
+      {error.includes(AGENCY_SESSION) ? (
+        <AgencySignOut token={props.token} />
+      ) : (
+        <Button type="submit" className="h-11 w-full text-base" disabled={busy}>
+          {busy ? "Opening your room…" : "Join the room"}
+        </Button>
+      )}
       <p className="text-muted-foreground text-center text-xs">
         No app or password needed. Keep this link: it&apos;s yours and opens the room on any device.
       </p>

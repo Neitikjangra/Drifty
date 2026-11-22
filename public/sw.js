@@ -17,6 +17,8 @@ self.addEventListener("push", (event) => {
       icon: "/brand/icon-192.png",
       badge: "/brand/icon-192.png",
       tag: data.tag || undefined,
+      // A newer alert with the same tag replaces the old one and still buzzes.
+      renotify: Boolean(data.tag),
       data: { url },
     }),
   );
