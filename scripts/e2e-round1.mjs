@@ -178,6 +178,8 @@ check("sign-out never redirects off-site", soEvil.headers.get("location") === "/
 const join = await client.req(`/api/join/${token}`, { method: "POST", body: { name: "E2E Client" } });
 check("client joins with the link", join.status === 200 && join.json?.projectId === projectId, `${join.status} ${join.text.slice(0, 160)}`);
 check("client got an httpOnly guest cookie", client.jar.has("drifty_guest"));
+const guestApp = await client.req("/app");
+check("client opening the app goes to their room", (guestApp.location ?? guestApp.text).includes(`/room/${projectId}`), `${guestApp.status} ${guestApp.location}`);
 // Same personal link on a second device (fresh browser, no cookie) → same person, straight in.
 const phone2 = new Browser("client second device");
 const reusePage = await phone2.req(`/join/${token}`);

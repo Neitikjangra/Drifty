@@ -39,6 +39,9 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
         const reg = await navigator.serviceWorker.register("/sw.js");
         const sub = await reg.pushManager.getSubscription();
         next = sub && Notification.permission === "granted" ? "on" : "off";
+        // This browser may have been turned on while someone else was signed in here (an agency
+        // login, then the client's link): re-link it to whoever is signed in now.
+        if (sub && next === "on") await apiJson("/api/push/subscribe", { body: sub.toJSON() }).catch(() => {});
       }
       if (!cancelled) setState(next);
     })().catch(() => !cancelled && setState("hidden"));

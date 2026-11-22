@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { PageLoading } from "@/components/page-loading";
 import { getCaller } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
-import { listArchivedProjects, listProjects } from "@/lib/db/repo";
+import { guestProjectIds, listArchivedProjects, listProjects } from "@/lib/db/repo";
 import { clientLimit } from "@/lib/plans";
 import { AddDemoButton } from "./add-demo-button";
 import { TimeSavedCard } from "@/components/time-saved-card";
@@ -25,6 +25,11 @@ export default function ProjectsPage() {
 
 async function Projects() {
   const caller = await getCaller();
+  // A client opening the installed app (it starts at /app) goes straight to their room.
+  if (caller.kind === "guest") {
+    const [first] = await guestProjectIds(caller.userId);
+    redirect(first ? `/room/${first}` : "/login");
+  }
   if (caller.kind !== "member") redirect("/login");
   if (!caller.membership) redirect("/app/onboarding");
 

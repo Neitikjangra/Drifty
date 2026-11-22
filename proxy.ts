@@ -33,7 +33,10 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getUser();
-  if (!data.user && request.nextUrl.pathname.startsWith("/app")) {
+  // A client opening the installed app (start_url /app) is let through to /app only, which
+  // verifies their guest cookie and sends them to their room.
+  const guestHome = request.nextUrl.pathname === "/app" && request.cookies.has("drifty_guest");
+  if (!data.user && !guestHome && request.nextUrl.pathname.startsWith("/app")) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = `?next=${encodeURIComponent(request.nextUrl.pathname)}`;

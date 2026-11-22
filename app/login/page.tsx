@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ClientLinkBox } from "./client-link-box";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Sign in · Drifty" };
@@ -20,5 +21,10 @@ async function Login() {
   // EMAIL_ENABLED=true turns on "Email me a code instead" and the emailed password reset.
   const emailEnabled = process.env.EMAIL_ENABLED?.trim().toLowerCase() === "true";
   const supportEmail = process.env.SUPPORT_EMAIL?.trim().replace(/^"(.*)"$/, "$1") || null;
-  return <LoginForm emailEnabled={emailEnabled} supportEmail={supportEmail} />;
+  return (
+    <div className="w-full max-w-sm space-y-8">
+      <LoginForm emailEnabled={emailEnabled} supportEmail={supportEmail} />
+      <ClientLinkBox />
+    </div>
+  );
 }
