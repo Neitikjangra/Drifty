@@ -189,7 +189,7 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
   });
   return (
     <>
-      <DeliverablesPanel projectId={project.id} canCreate={canManage} canUpload={canUpload} hasApprover={Boolean(project.approver_id)} items={deliverableRows} />
+      <DeliverablesPanel projectId={project.id} clientChannelId={project.client_channel_id} canCreate={canManage} canUpload={canUpload} hasApprover={Boolean(project.approver_id)} items={deliverableRows} />
       <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
     </>
   );

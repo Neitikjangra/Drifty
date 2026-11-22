@@ -42,9 +42,20 @@ export interface ChatHostOptions {
   knownGroups?: { groupId: string; name: string }[];
 }
 
+/** A room message as the Web SDK returns it (docs chatsdk-web/message/get-history). */
+export interface HistoryMessage {
+  messageId: string;
+  senderUserId: string;
+  sentTime: number;
+  messageType: string;
+  content: unknown;
+}
+
 export interface ChatHostHandle {
   /** Switch the open room (e.g. client ↔ internal tab). */
   open(channelId: string): Promise<void>;
+  /** Recent messages of a group room, newest first (up to `max`), fetched from Nexconn. */
+  history(channelId: string, max?: number): Promise<HistoryMessage[]>;
   destroy(): Promise<void>;
 }
 
@@ -172,7 +183,7 @@ const fetchToken = async () => (await postJson<{ token: string }>("/api/nexconn/
 async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   publish("connecting");
   // Token and the (large) SDK bundles load in parallel: each one used to wait for the previous.
-  const [token, chat, { NCChatUIApplication, ChatUIEvents }] = await Promise.all([
+  const [token, chat, { NCChatUIApplication, ChatUIEvents, ChatUICommand }] = await Promise.all([
     fetchToken(),
     import("@nexconn/chat"),
     import("@nexconn/chatui"),
@@ -262,6 +273,11 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     const channelId = evt.data.channelModel?.channelIdentifier?.channelId;
     if (channelId) window.dispatchEvent(new CustomEvent(VOICE_EVENT, { detail: { channelId } }));
   });
+  // Feature switches (docs chatui-web/chat-ui/switch, before ready()):
+  // - no delivery/read dots next to sent messages (they read as a stuck loader); sending/failed remain
+  // - emoji reactions on messages (desktop and H5 layouts)
+  app.setCommandSwitch(ChatUICommand.SHOW_MESSAGE_STATE, false);
+  app.setCommandSwitch(ChatUICommand.MESSAGE_REACTION_ENABLED, true);
   app.ready();
 
   // Live card status: server-written metadata → window event → card elements.
@@ -319,6 +335,16 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   root.style.width = "100%";
   root.style.height = "100%";
   opts.container.replaceChildren(root);
+  // Layout (docs chatui-web/chat-ui/layout): our page has its own room tabs, so hide ChatUI's
+  // channel list and its back button. The message area then gets the full width, so the
+  // sender's own (right-side) bubbles are no longer pushed out of view. Re-applied after the
+  // first room opens, in case the shell finished mounting later.
+  const applyLayout = () => {
+    app.setChannelBarSwitch(false);
+    app.setChannelDetailBackSwitch(false);
+  };
+  applyLayout();
+  const stopFit = fitChatUI(opts.container);
   // Push the room's name first, so the header never shows the raw channel id on a new device.
   const openRoom = async (channelId: string) => {
     const known = opts.knownGroups?.find((k) => k.groupId === channelId);
@@ -341,6 +367,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     for (let attempt = 0; attempt < 8; attempt++) {
       const target = wanted;
       const res = await openRoom(target).catch(() => ({ isOk: false }));
+      if (res.isOk) applyLayout();
       if (res.isOk && target === wanted) return;
       if (!res.isOk) await sleep(400);
     }
@@ -349,12 +376,32 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   void openWanted(300).finally(() => (starting = false)); // retries cover a ChatUI that is still mounting
 
   return {
+    async history(channelId, max = 200) {
+      const query = chat.BaseChannel.createMessagesQuery({
+        channelIdentifier: new GroupChannelIdentifier(channelId),
+        startTime: Date.now(),
+        pageSize: 100,
+        isAscending: false,
+      });
+      const out: HistoryMessage[] = [];
+      while (out.length < max && query.hasNext) {
+        const page = await query.loadNextPage();
+        if (!page.isOk || !page.data) break;
+        const list = page.data.data ?? [];
+        for (const m of list) {
+          out.push({ messageId: m.messageId, senderUserId: m.senderUserId, sentTime: m.sentTime, messageType: m.messageType, content: m.content });
+        }
+        if (!list.length) break;
+      }
+      return out.slice(0, max);
+    },
     async open(channelId) {
       wanted = channelId;
       if (starting) return; // the start-up loop opens the latest choice
       await openWanted(0);
     },
     async destroy() {
+      stopFit();
       keeper?.dispose();
       keeper = null;
       NCEngine.removeConnectionStatusHandler("drifty-connection");
@@ -365,5 +412,65 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       app.destroy();
       await NCEngine.disconnect();
     },
+  };
+}
+
+/**
+ * Reads a room's recent history through the live chat connection (if one is open), so the
+ * server can store messages the webhook missed. Empty when the chat isn't running.
+ */
+export async function readRoomHistory(channelId: string, max = 200): Promise<HistoryMessage[]> {
+  if (!active) return [];
+  const handle = await active.catch(() => null);
+  if (!handle) return [];
+  return handle.history(channelId, max).catch(() => []);
+}
+
+/**
+ * Layout workaround (Layer 5). ChatUI 26.5's message area has a hard `min-width: 600px`, so in a
+ * narrower column (our desktop layout next to the side panels, and phones) the sender's own
+ * right-side bubbles were pushed out of view. `setChannelBarSwitch(false)` is documented but
+ * didn't hide the duplicate channel list in this version. We add one small stylesheet inside
+ * ChatUI's open shadow roots: hide the list (our page has its own room tabs) and let the message
+ * area shrink to the column. Selectors only touch ChatUI's layout classes, never messages.
+ */
+const FIT_CSS = `
+.nc-chatui-app-wrapper-left{display:none!important}
+.nc-chatui-app-wrapper-right{flex:1 1 auto!important;min-width:0!important;width:100%!important;max-width:100%!important}
+.nc-chatui-app-inner{min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+.nc-chatui-msg-bubble-wrapper{max-width:min(78%,560px)!important}
+.nc-chatui-msg-bubble p{overflow-wrap:anywhere;word-break:break-word}
+`;
+
+function fitChatUI(container: HTMLElement): () => void {
+  const patched = new WeakSet<ShadowRoot>();
+  const patch = (root: ParentNode) => {
+    for (const el of root.querySelectorAll("*")) {
+      const sr = (el as HTMLElement).shadowRoot;
+      if (!sr) continue;
+      if (!patched.has(sr)) {
+        const style = document.createElement("style");
+        style.dataset.drifty = "fit";
+        style.textContent = FIT_CSS;
+        sr.appendChild(style);
+        patched.add(sr);
+      }
+      patch(sr);
+    }
+  };
+  patch(container);
+  // ChatUI renders lazily (rooms, messages): re-check often at first, then occasionally.
+  let ticks = 0;
+  const timer = setInterval(() => {
+    patch(container);
+    if (++ticks === 40) {
+      clearInterval(timer);
+      slow = setInterval(() => patch(container), 3000);
+    }
+  }, 250);
+  let slow: ReturnType<typeof setInterval> | null = null;
+  return () => {
+    clearInterval(timer);
+    if (slow) clearInterval(slow);
   };
 }

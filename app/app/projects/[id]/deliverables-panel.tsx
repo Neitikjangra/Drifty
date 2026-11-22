@@ -76,6 +76,8 @@ function FilePicker({ id, onPick, file }: { id: string; onPick: (f: File | null)
 
 export function DeliverablesPanel(props: {
   projectId: string;
+  /** The client room, so Summarise can sync messages the webhook may have missed. */
+  clientChannelId?: string | null;
   canCreate: boolean;
   canUpload: boolean;
   hasApprover: boolean;
@@ -100,7 +102,7 @@ export function DeliverablesPanel(props: {
       )}
       <ul className="space-y-3">
         {props.items.map((d) => (
-          <DeliverableItem key={d.id} item={d} projectId={props.projectId} canUpload={props.canUpload} canSummarise={props.canCreate} />
+          <DeliverableItem key={d.id} item={d} projectId={props.projectId} clientChannelId={props.clientChannelId ?? null} canUpload={props.canUpload} canSummarise={props.canCreate} />
         ))}
       </ul>
     </section>
@@ -196,14 +198,34 @@ function NewDeliverableForm({
   );
 }
 
+/** Text, replies and voice notes: the message kinds Summarise reads. */
+const FEEDBACK_TYPES = new Set(["RC:TxtMsg", "RC:ReferenceMsg", "RC:HQVCMsg", "RC:VcMsg"]);
+
+/**
+ * Safety net for the Nexconn webhook: read the client room's recent history through the chat
+ * connection and let the server store anything it hasn't seen. Never blocks Summarise.
+ */
+async function syncClientRoom(projectId: string, channelId: string | null) {
+  if (!channelId) return;
+  try {
+    const { readRoomHistory } = await import("@/components/chat/chat-host");
+    const history = (await readRoomHistory(channelId, 200)).filter((m) => FEEDBACK_TYPES.has(m.messageType) && m.senderUserId !== "driftybot");
+    if (history.length) await apiJson("/api/messages/sync", { body: { projectId, messages: history } });
+  } catch {
+    // The webhook path still works; Summarise goes ahead either way.
+  }
+}
+
 function DeliverableItem({
   item,
   projectId,
+  clientChannelId,
   canUpload,
   canSummarise,
 }: {
   item: DeliverableRow;
   projectId: string;
+  clientChannelId: string | null;
   canUpload: boolean;
   canSummarise: boolean;
 }) {
@@ -231,6 +253,7 @@ function DeliverableItem({
 
   async function summarise() {
     setSummary({ busy: true, text: "", error: false });
+    await syncClientRoom(projectId, clientChannelId);
     try {
       const r = await apiJson<{ items: number; conflicts: number; conflictCheck?: string; messages: number }>(`/api/deliverables/${item.id}/summarise`);
       const failed = r.conflictCheck === "failed";
