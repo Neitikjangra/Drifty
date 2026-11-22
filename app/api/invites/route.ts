@@ -3,6 +3,7 @@ import { routeProjectAccess } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { createInvite } from "@/lib/invite-admin";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.object({
   projectId: z.uuid(),
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
   try {
     const res = await routeProjectAccess(input.projectId);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const limited = await rateLimit(req, "invites", LIMITS.write, res.access.userId);
+    if (limited) return limited;
     const access = res.access;
     if (access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(403, "Only owners and account managers can invite clients.");

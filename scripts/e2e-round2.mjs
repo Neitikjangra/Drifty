@@ -95,6 +95,7 @@ console.log(`E2E Round 2 against ${BASE}\n`);
 // Setup: agency, project, approver + reviewer
 await signIn(am, "e2e-r2@drifty.test");
 await am.req("/api/onboarding", { method: "POST", body: { workspaceName: "E2E Round 2 Agency (test)", displayName: "R2 AM" } });
+await admin.from("workspaces").update({ plan: "pilot" }).eq("name", "E2E Round 2 Agency (test)"); // test agency: no Free-plan client limit
 const proj = await am.req("/api/projects", { method: "POST", body: { clientName: `R2 campaign ${stamp}` } });
 check("setup: project created", proj.status === 201, `${proj.status} ${proj.text.slice(0, 120)}`);
 const projectId = proj.json?.id;

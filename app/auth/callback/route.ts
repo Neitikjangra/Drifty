@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/db/supabase-server";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 /** Only same-site relative paths, so the link can't bounce users to another site. */
 function safeNext(next: string | null): string {
@@ -12,6 +13,8 @@ function safeNext(next: string | null): string {
  * PKCE (`?code=`) and email-template token hash (`?token_hash=&type=`).
  */
 export async function GET(request: NextRequest) {
+  const limited = await rateLimit(request, "auth-callback", LIMITS.auth);
+  if (limited) return limited;
   const { searchParams } = request.nextUrl;
   const next = safeNext(searchParams.get("next"));
   const supabase = await supabaseServer();

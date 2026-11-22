@@ -9,6 +9,7 @@ import { backToCreativeText } from "@/lib/drift/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { sendGroupMessage } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.object({ action: z.enum(["send", "back"]) });
 
@@ -29,6 +30,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/drift/[id]">) {
     if (!alert || !d) return jsonError(404, "Not found.");
     const res = await routeProjectAccess(d.project_id);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Not found.");
+    const limited = await rateLimit(req, "drift", LIMITS.write, res.access.userId);
+    if (limited) return limited;
     const access = res.access;
     if (access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(403, "Only owners and account managers can decide this.");

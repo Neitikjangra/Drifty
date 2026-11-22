@@ -89,12 +89,6 @@ const msgEvent = (userId, channelId, text, id) => ({
   data: [{ userId, channelId, messageType: "RC:TxtMsg", content: JSON.stringify({ content: text }), channelType: 3, time: Date.now(), messageId: id, os: "Websocket" }],
 });
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
-function silentWav(seconds = 1) {
-  const sr = 8000, n = sr * seconds, b = Buffer.alloc(44 + n * 2);
-  b.write("RIFF", 0); b.writeUInt32LE(36 + n * 2, 4); b.write("WAVE", 8); b.write("fmt ", 12); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
-  b.writeUInt32LE(sr, 24); b.writeUInt32LE(sr * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write("data", 36); b.writeUInt32LE(n * 2, 40);
-  return b;
-}
 
 const stamp = Date.now().toString(36);
 const am = new Browser(), approver = new Browser(), reviewer = new Browser(), stranger = new Browser();
@@ -120,6 +114,7 @@ const verdictOf = (results, id) => results.find((r) => r.itemId === id)?.verdict
 // Setup: project, approver + reviewer, v1, two copy requests confirmed by the AM
 await signIn(am, "e2e-r4@drifty.test");
 await am.req("/api/onboarding", { method: "POST", body: { workspaceName: "E2E Round 4 Agency (test)", displayName: "R4 AM" } });
+await admin.from("workspaces").update({ plan: "pilot" }).eq("name", "E2E Round 4 Agency (test)"); // test agency: no Free-plan client limit
 const proj = await am.req("/api/projects", { method: "POST", body: { clientName: `R4 Diwali ${stamp}` } });
 projectId = proj.json?.id;
 check("setup: project", proj.status === 201, proj.text.slice(0, 120));

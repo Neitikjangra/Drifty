@@ -5,6 +5,7 @@ import { approverContext } from "@/lib/deliverables/approver";
 import { postTextAs, setCardStatus } from "@/lib/deliverables/cards-server";
 import { canAct } from "@/lib/deliverables/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.object({ note: z.string().trim().max(2000).optional() });
 
@@ -21,6 +22,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/versions/[id]/r
     const c = await approverContext(id);
     if (!c.ok) return jsonError(c.status, c.error);
     const { v, d, access } = c;
+    const limited = await rateLimit(req, "request-changes", LIMITS.write, access.userId);
+    if (limited) return limited;
     const allowed = canAct("request_changes", { isCurrent: d.current_version === v.number, deliverableStatus: d.status });
     if (!allowed.ok) return jsonError(409, allowed.reason);
     if (!(await transitionDeliverable(d.id, v.number, ["in_review", "draft"], "changes_requested"))) {

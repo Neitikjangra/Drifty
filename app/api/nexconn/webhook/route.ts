@@ -3,6 +3,7 @@ import { verifySignature } from "@/lib/nexconn/sign";
 import { isFreshTimestamp, parseWebhookMessage, type WebhookMessage } from "@/lib/messages/parse";
 import { projectForChannel, storeMessage } from "@/lib/messages/store";
 import { transcribeVoice } from "@/lib/messages/voice";
+import { runJob } from "@/lib/jobs";
 
 /**
  * POST /api/nexconn/webhook: Nexconn `message:send` events (FR-8 input).
@@ -44,8 +45,8 @@ export async function POST(req: Request) {
         // Our own voice notes point at /api/voice/:id; transcribe from storage instead of over HTTP.
         const ownPath = /\/api\/voice\/([0-9a-f-]{36})/.exec(remote)?.[1];
         after(() =>
-          transcribeVoice({ nexconnMsgId: id, storagePath: ownPath ? undefined : null, remoteUrl: ownPath ? null : remote }).catch(() =>
-            console.warn("[webhook] transcription failed"),
+          runJob("transcribe", { msg: id.slice(0, 64) }, () =>
+            transcribeVoice({ nexconnMsgId: id, storagePath: ownPath ? undefined : null, remoteUrl: ownPath ? null : remote }),
           ),
         );
       }

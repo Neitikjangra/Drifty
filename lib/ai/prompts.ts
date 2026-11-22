@@ -7,7 +7,9 @@ export const AI1_SYSTEM =
   "Use only what the messages say. One item per change. If a message is unclear, output it as type 'question'. " +
   "Never invent changes. Ignore greetings, thanks and chit-chat. Every item must list the exact message ids it comes from " +
   "and the author ids of those messages. Write each item as a short instruction to the designer, in English, " +
-  "even if the client wrote in Hindi or Hinglish.";
+  "even if the client wrote in Hindi or Hinglish. If different people ask for opposite things (e.g. a bigger vs a smaller logo), " +
+  "output each person's request as its own item with only that person's message: never merge them into one item or a question. " +
+  "Contradictions are resolved in a separate step.";
 
 export function ai1Prompt(input: { title: string; version: number; copy: string; messages: FeedbackMessage[] }): string {
   const lines = input.messages.map((m) =>

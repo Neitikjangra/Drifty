@@ -4,18 +4,21 @@ import { approverContext } from "@/lib/deliverables/approver";
 import { postReceipt, setCardStatus } from "@/lib/deliverables/cards-server";
 import { canAct } from "@/lib/deliverables/rules";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/versions/:id/approve: approver only, verified on the server (FR-5).
  * Writes the insert-only approval row with the exact copy and asset hash (FR-13), turns
  * the card green for everyone through message metadata (FR-6) and posts a receipt.
  */
-export async function POST(_req: Request, ctx: RouteContext<"/api/versions/[id]/approve">) {
+export async function POST(req: Request, ctx: RouteContext<"/api/versions/[id]/approve">) {
   const { id } = await ctx.params;
   try {
     const c = await approverContext(id);
     if (!c.ok) return jsonError(c.status, c.error);
     const { v, d, access } = c;
+    const limited = await rateLimit(req, "approve", LIMITS.write, access.userId);
+    if (limited) return limited;
     const allowed = canAct("approve", { isCurrent: d.current_version === v.number, deliverableStatus: d.status });
     if (!allowed.ok) return jsonError(409, allowed.reason);
 

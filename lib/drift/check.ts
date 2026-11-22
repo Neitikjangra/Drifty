@@ -2,7 +2,7 @@ import "server-only";
 import { AiError, generateJson } from "@/lib/ai/gemini";
 import { sanitizeDrift } from "@/lib/ai/guards";
 import { AI3_SYSTEM, ai3Prompt } from "@/lib/ai/prompts";
-import { driftJsonSchema, driftSchema, type DriftOutput } from "@/lib/ai/schemas";
+import { driftJsonSchema, driftSchema, type DriftOutput, type DriftVerdict } from "@/lib/ai/schemas";
 import type { Deliverable, Version } from "@/lib/db/deliverables";
 import { DbError } from "@/lib/db/repo";
 import { supabaseAdmin } from "@/lib/db/supabase-server";
@@ -171,36 +171,48 @@ async function loadPair(from: Version, to: Version) {
  */
 export async function runDriftCheck(project: Project, d: Deliverable, alert: VersionAlert, from: Version, to: Version, items: ItemForCheck[]) {
   const db = supabaseAdmin();
-  const media = await loadPair(from, to);
-  let out: DriftOutput | null = null;
-  try {
-    out = await generateJson({
-      task: "ai3-drift",
-      system: AI3_SYSTEM,
-      prompt: ai3Prompt({
-        title: d.title,
-        fromVersion: from.number,
-        toVersion: to.number,
-        oldCopy: from.copy_text,
-        newCopy: to.copy_text,
-        items: items.map((i) => ({ id: i.id, text: i.text, type: i.type })),
-        images: media ? "both" : "none",
-      }),
-      jsonSchema: driftJsonSchema,
-      zod: driftSchema,
-      thinking: "medium",
-      media: media ?? undefined,
-      timeouts: { first: 20_000, last: 40_000 },
-    });
-  } catch (err) {
-    if (!(err instanceof AiError)) throw err;
+  // Safe to retry (runJob): a card already posted means done; a saved AI result is reused.
+  const before = await getVersionAlert(alert.id);
+  if (!before || before.resolved_at || before.card_message_id) return;
+  let results: { itemId: string; verdict: DriftVerdict; note: string }[];
+  let aiChecked: boolean;
+  if (before.detail.results?.length) {
+    results = before.detail.results as typeof results;
+    aiChecked = Boolean(before.detail.aiChecked);
+  } else {
+    const media = await loadPair(from, to);
+    let out: DriftOutput | null = null;
+    try {
+      out = await generateJson({
+        task: "ai3-drift",
+        system: AI3_SYSTEM,
+        prompt: ai3Prompt({
+          title: d.title,
+          fromVersion: from.number,
+          toVersion: to.number,
+          oldCopy: from.copy_text,
+          newCopy: to.copy_text,
+          items: items.map((i) => ({ id: i.id, text: i.text, type: i.type })),
+          images: media ? "both" : "none",
+        }),
+        jsonSchema: driftJsonSchema,
+        zod: driftSchema,
+        thinking: "medium",
+        media: media ?? undefined,
+        timeouts: { first: 20_000, last: 40_000 },
+      });
+    } catch (err) {
+      if (!(err instanceof AiError)) throw err;
+    }
+    results = sanitizeDrift(out, items, Boolean(media));
+    aiChecked = Boolean(out);
+    await db.from("drift_alerts").update({ detail: { ...alert.detail, aiChecked, results } }).eq("id", alert.id).is("resolved_at", null);
   }
-  const results = sanitizeDrift(out, items, Boolean(media));
   const byId = new Map(items.map((i) => [i.id, i]));
 
   // The current alert may have been superseded by a newer upload while the AI ran.
   const fresh = await getVersionAlert(alert.id);
-  if (!fresh || fresh.resolved_at) return;
+  if (!fresh || fresh.resolved_at || fresh.card_message_id) return;
 
   // Item statuses (PRD: done/missing/reversed/needs_check) + the change list card chips.
   const { data: rows } = await db.from("change_items").select("id, position, change_list_id, text").in("id", items.map((i) => i.id));
@@ -225,7 +237,7 @@ export async function runDriftCheck(project: Project, d: Deliverable, alert: Ver
     fromVersion: from.number,
     toVersion: to.number,
     toVersionId: to.id,
-    aiChecked: Boolean(out),
+    aiChecked,
     results: results.map((r) => ({
       itemId: r.itemId,
       text: (byId.get(r.itemId)?.text ?? "").slice(0, 300),
@@ -246,7 +258,7 @@ export async function runDriftCheck(project: Project, d: Deliverable, alert: Ver
   });
   await db
     .from("drift_alerts")
-    .update({ card_message_id: cardId, detail: { ...alert.detail, state: "ready", aiChecked: Boolean(out), results } })
+    .update({ card_message_id: cardId, detail: { ...alert.detail, state: "ready", aiChecked, results } })
     .eq("id", alert.id);
 }
 

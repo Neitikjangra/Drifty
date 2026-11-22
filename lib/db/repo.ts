@@ -21,7 +21,7 @@ function check<T>(op: string, res: { data: T; error: { code?: string } | null })
 }
 
 const PROJECT_COLS =
-  "id, created_at, workspace_id, client_name, approver_id, rounds_included, client_channel_id, internal_channel_id, archived";
+  "id, created_at, workspace_id, client_name, approver_id, rounds_included, client_channel_id, internal_channel_id, archived, is_demo";
 
 // ------------------------------------------------------------ profiles
 
@@ -145,12 +145,40 @@ export async function getProject(projectId: string): Promise<Project | null> {
   ) as Project | null;
 }
 
-export async function insertProject(workspaceId: string, clientName: string): Promise<Project> {
+export async function insertProject(workspaceId: string, clientName: string, isDemo = false): Promise<Project> {
   const db = supabaseAdmin();
   return check(
     "insertProject",
-    await db.from("projects").insert({ workspace_id: workspaceId, client_name: clientName }).select(PROJECT_COLS).single(),
+    await db.from("projects").insert({ workspace_id: workspaceId, client_name: clientName, is_demo: isDemo }).select(PROJECT_COLS).single(),
   ) as Project;
+}
+
+export async function listArchivedProjects(workspaceId: string): Promise<Project[]> {
+  return check(
+    "listArchivedProjects",
+    await supabaseAdmin()
+      .from("projects")
+      .select(PROJECT_COLS)
+      .eq("workspace_id", workspaceId)
+      .eq("archived", true)
+      .order("created_at", { ascending: false }),
+  ) as Project[];
+}
+
+/** Active client projects that count towards the plan (demo projects don't). */
+export async function countActiveClientProjects(workspaceId: string): Promise<number> {
+  const { count, error } = await supabaseAdmin()
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("archived", false)
+    .eq("is_demo", false);
+  if (error) throw new DbError("countActiveClientProjects", error.code);
+  return count ?? 0;
+}
+
+export async function setProjectArchived(projectId: string, archived: boolean) {
+  check("setProjectArchived", await supabaseAdmin().from("projects").update({ archived }).eq("id", projectId));
 }
 
 export async function setProjectChannels(projectId: string, clientChannelId: string, internalChannelId: string) {

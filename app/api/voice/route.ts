@@ -8,6 +8,8 @@ import { handleRouteError, jsonError, ok } from "@/lib/http";
 import { storeMessage } from "@/lib/messages/store";
 import { transcribeVoice, VOICE_BUCKET } from "@/lib/messages/voice";
 import { sendGroupMessage } from "@/lib/nexconn/api";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { runJob } from "@/lib/jobs";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_SECONDS = 60; // Nexconn HD voice limit
@@ -42,6 +44,8 @@ export async function POST(req: Request) {
 
     const res = await routeProjectAccess(projectId);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const limited = await rateLimit(req, "voice", LIMITS.upload, res.access.userId);
+    if (limited) return limited;
     const { access } = res;
     const rooms = allowedRooms(access.kind === "guest" ? { kind: "guest", role: access.role } : { kind: "member", role: access.role });
     const isClient = channelId === access.project.client_channel_id && rooms.client;
@@ -78,7 +82,7 @@ export async function POST(req: Request) {
       },
       { voicePath: path },
     );
-    after(() => transcribeVoice({ nexconnMsgId: messageId, storagePath: path }).catch(() => console.warn("[voice] transcription failed")));
+    after(() => runJob("transcribe", { msg: messageId.slice(0, 64) }, () => transcribeVoice({ nexconnMsgId: messageId, storagePath: path })));
     return ok({ messageId }, 201);
   } catch (err) {
     return handleRouteError("voice", err);

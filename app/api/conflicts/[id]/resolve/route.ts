@@ -7,6 +7,7 @@ import { setItemOnCard } from "@/lib/feedback/summarise";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { sendGroupMessage, setGroupMessageMetadata } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.discriminatedUnion("choice", [
   z.object({ choice: z.literal("a") }),
@@ -27,6 +28,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/conflicts/[id]/
   try {
     const caller = await getCaller();
     if (caller.kind === "anonymous") return jsonError(401, "Open your invite link again to sign in.");
+    const limited = await rateLimit(req, "conflicts", LIMITS.write, caller.userId);
+    if (limited) return limited;
     const db = supabaseAdmin();
     const { data } = await db.from("drift_alerts").select("id, deliverable_id, version_id, kind, detail, card_message_id, resolved_at").eq("id", id).maybeSingle();
     const alert = data as {

@@ -15,6 +15,8 @@ import { nextVersion } from "@/lib/deliverables/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { inspectUpload, UploadError } from "@/lib/storage";
 import { createVersionAlert, driftItems, lastSentVersion, runDriftCheck, supersedeOpenAlerts } from "@/lib/drift/check";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { runJob } from "@/lib/jobs";
 
 export const maxDuration = 60; // the AI-3 drift check runs after the response
 
@@ -39,6 +41,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
     if (!d) return jsonError(404, "Deliverable not found.");
     const res = await routeProjectAccess(d.project_id);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Deliverable not found.");
+    const limited = await rateLimit(req, "versions", LIMITS.ai, res.access.userId);
+    if (limited) return limited;
     const access = res.access;
     if (access.kind !== "member" || !canUploadVersions(access.role)) {
       return jsonError(403, "Only your agency team can upload new versions.");
@@ -64,13 +68,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
       await updateDeliverable(d.id, { current_version: next.number, status: "draft" });
       const alert = await createVersionAlert(d, lastSent, v, toCheck);
       const project = access.project;
-      after(async () => {
-        try {
-          await runDriftCheck(project, d, alert, lastSent, v, toCheck);
-        } catch (err) {
-          console.error("[drift] check failed", err instanceof Error ? err.name : "error");
-        }
-      });
+      after(() => runJob("drift-check", { alertId: alert.id }, () => runDriftCheck(project, d, alert, lastSent, v, toCheck)));
       return ok({ versionId: v.id, version: next.number, held: true, checking: toCheck.length, alertId: alert.id }, 201);
     }
 

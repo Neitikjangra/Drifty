@@ -30,7 +30,27 @@ function litProductionAliases(): Record<string, string> {
   }
 }
 
+/**
+ * Security headers on every response (PRD section 7). The CSP only sets directives that can't
+ * break ChatUI (no script/connect limits): no framing, no plugins, fixed base and form targets.
+ */
+const SECURITY_HEADERS = [
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), geolocation=(), payment=(), microphone=(self)" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // Invite links carry a token in the path: never send it on as a referrer.
+      { source: "/join/:token*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+    ];
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

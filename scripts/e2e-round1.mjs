@@ -255,7 +255,7 @@ check("still one record per person after re-issue", backRows?.length === 2, `${b
 await signIn(otherAgency, `other-${stamp}@drifty.test`);
 await otherAgency.req("/api/onboarding", { method: "POST", body: { workspaceName: `Other ${stamp}`, displayName: "Other" } });
 const otherPage = await otherAgency.req(`/app/projects/${projectId}`);
-check("another agency gets 404 for this project", otherPage.status === 404 || otherPage.text.includes("could not be found"), `${otherPage.status}`);
+check("another agency gets 404 for this project", (otherPage.status === 404 || otherPage.text.includes("could not be found") || otherPage.text.includes("Page not found")) && !otherPage.text.includes(`Diwali campaign ${stamp}`), `${otherPage.status}`);
 const otherInvite = await otherAgency.req("/api/invites", { method: "POST", body: { projectId, emailOrPhone: "x@e2e.test", name: "x", role: "approver" } });
 check("another agency can't invite into this project", otherInvite.status === 404, `${otherInvite.status}`);
 const otherDir = await otherAgency.req("/api/chat/directory", { method: "POST", body: { groupIds: [projRow.client_channel_id, projRow.internal_channel_id] } });

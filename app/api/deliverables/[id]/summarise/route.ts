@@ -4,12 +4,13 @@ import { canManageProjects } from "@/lib/auth/permissions";
 import { getDeliverable } from "@/lib/db/deliverables";
 import { SummariseError, summarise } from "@/lib/feedback/summarise";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 // AI calls can take several seconds (NFR-1 target: within 15 s).
 export const maxDuration = 60;
 
 /** POST /api/deliverables/:id/summarise: runs AI-1 + AI-2 (FR-8, FR-12). Owner/AM only. */
-export async function POST(_req: Request, ctx: RouteContext<"/api/deliverables/[id]/summarise">) {
+export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[id]/summarise">) {
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return jsonError(404, "Deliverable not found.");
   try {
@@ -17,6 +18,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/deliverables/[
     if (!d) return jsonError(404, "Deliverable not found.");
     const res = await routeProjectAccess(d.project_id);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Deliverable not found.");
+    const limited = await rateLimit(req, "summarise", LIMITS.ai, res.access.userId);
+    if (limited) return limited;
     if (res.access.kind !== "member" || !canManageProjects(res.access.role)) {
       return jsonError(403, "Only owners and account managers can summarise feedback.");
     }

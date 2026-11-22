@@ -28,6 +28,7 @@ export interface Project {
   rounds_included: number;
   client_channel_id: string | null;
   internal_channel_id: string | null;
+  is_demo: boolean;
   archived: boolean;
 }
 

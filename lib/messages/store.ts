@@ -5,7 +5,7 @@ import { DbError } from "@/lib/db/repo";
 import type { ParsedMessage } from "./parse";
 
 const PROJ_COLS =
-  "id, created_at, workspace_id, client_name, approver_id, rounds_included, client_channel_id, internal_channel_id, archived";
+  "id, created_at, workspace_id, client_name, approver_id, rounds_included, client_channel_id, internal_channel_id, archived, is_demo";
 
 /** The project whose client or internal room this channel is, or null. */
 export async function projectForChannel(channelId: string): Promise<Project | null> {

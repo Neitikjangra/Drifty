@@ -50,7 +50,10 @@ export async function projectAccess(projectId: string, caller?: Caller): Promise
     getProject(projectId),
     c.kind === "guest" ? getGuestRole(projectId, c.userId) : Promise.resolve(null),
   ]);
-  if (!project || project.archived) return null;
+  if (!project) return null;
+  // Archived projects stay open to the agency (history, ledger, restore) but not to clients:
+  // that's what makes archiving free a slot on the Free plan.
+  if (project.archived && c.kind === "guest") return null;
 
   if (c.kind === "member") {
     if (!c.membership || c.membership.workspace.id !== project.workspace_id) return null;

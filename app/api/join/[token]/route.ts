@@ -7,6 +7,7 @@ import { resolveInvite } from "@/lib/invites";
 import { issueAccessToken } from "@/lib/nexconn/api";
 import { nexconnUserId } from "@/lib/nexconn/ids";
 import { addToRoom } from "@/lib/nexconn/rooms";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 // Name is only needed the first time; returning visits just continue.
 const body = z.object({ name: z.string().trim().min(1).max(64).optional() });
@@ -27,6 +28,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/join/[token]">)
   const input = await readBody(req, body);
   if (!input) return jsonError(400, "Enter your name.");
   try {
+    const limited = await rateLimit(req, "join", LIMITS.join);
+    if (limited) return limited;
     if (await getAgencyUser()) {
       return jsonError(409, "You're signed in as an agency user. Open this link in a private window or on the client's device.");
     }

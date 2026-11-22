@@ -1,4 +1,6 @@
 import "server-only";
+import { after } from "next/server";
+import { captureError } from "@/lib/observability/sentry";
 import type { z } from "zod";
 import { MissingEnvError } from "@/lib/env";
 import { DbError } from "@/lib/db/repo";
@@ -15,8 +17,17 @@ export const ok = (data: Record<string, unknown> = {}, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 /** JSON error with a friendly message. Never echoes secrets or message contents. */
-export function jsonError(status: number, error: string, extra?: Record<string, unknown>) {
-  return Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store" } });
+export function jsonError(status: number, error: string, extra?: Record<string, unknown>, headers?: Record<string, string>) {
+  return Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store", ...headers } });
+}
+
+/** Sends a server error to Sentry after the response (no-op without SENTRY_DSN). */
+export function report(route: string, err: unknown) {
+  try {
+    after(() => captureError(err, { route }));
+  } catch {
+    void captureError(err, { route }); // outside a request (scripts/tests)
+  }
 }
 
 /** Maps known failures to safe responses; logs only the error class and code. */
@@ -27,12 +38,15 @@ export function handleRouteError(route: string, err: unknown) {
   }
   if (err instanceof DbError) {
     console.error(`[${route}] ${err.message}`);
+    report(route, err);
     return jsonError(500, "We couldn't save that. Please try again.");
   }
   if (err instanceof NexconnApiError) {
     console.error(`[${route}] ${err.message}`);
+    report(route, err);
     return jsonError(502, "Chat service error. Please try again.");
   }
   console.error(`[${route}] unexpected error: ${err instanceof Error ? err.name : "unknown"}`);
+  report(route, err);
   return jsonError(500, "Something went wrong. Please try again.");
 }

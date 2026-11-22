@@ -22,7 +22,11 @@ const env = (k: string) => process.env[k]?.trim().replace(/^"(.*)"$/, "$1") || "
 
 const clients = new Map<number, GoogleGenAI>();
 /** `timeoutMs`: short for text tasks (NFR-1: change list within 15 s), longer for audio. */
-function ai(timeoutMs = 25_000) {
+/** Gemini rejects request deadlines under 10 s (400 INVALID_ARGUMENT), and the SDK sends ours. */
+export const MIN_AI_TIMEOUT_MS = 10_000;
+
+function ai(requestedMs = 25_000) {
+  const timeoutMs = Math.max(MIN_AI_TIMEOUT_MS, requestedMs);
   const key = env("GEMINI_API_KEY");
   if (!key) throw new AiError("AI isn't configured.");
   // The SDK's own retries would hide overload for minutes; we handle retries ourselves.
@@ -100,7 +104,7 @@ export async function generateJson<S extends z.ZodType>(opts: {
   /** ms for the main model when a fallback exists / for the last model tried. */
   timeouts?: { first: number; last: number };
 }): Promise<z.infer<S>> {
-  const t = opts.timeouts ?? { first: 8_000, last: 35_000 };
+  const t = opts.timeouts ?? { first: MIN_AI_TIMEOUT_MS, last: 35_000 };
   const contents = opts.media?.length
     ? [
         {
@@ -115,6 +119,7 @@ export async function generateJson<S extends z.ZodType>(opts: {
   const started = Date.now();
   let lastProblem = "";
   let quota = false;
+  let lastStatus = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await onAvailableModel(opts.task, (model, hasFallback) =>
@@ -138,11 +143,12 @@ export async function generateJson<S extends z.ZodType>(opts: {
     } catch (err) {
       if (err instanceof AiError && err.message === "AI isn't configured.") throw err;
       lastProblem = err instanceof SyntaxError ? "parse" : isOverload(err) ? "busy" : "api";
+      if (lastProblem === "api") lastStatus = String((err as { status?: number })?.status ?? (err instanceof Error ? err.name : "?"));
       quota = isQuota(err);
       if (lastProblem === "busy") break; // already retried inside onAvailableModel
     }
   }
-  console.warn(`[ai] ${opts.task} failed (${lastProblem}) ms=${Date.now() - started}`);
+  console.warn(`[ai] ${opts.task} failed (${lastProblem}${lastStatus ? ` ${lastStatus}` : ""}) ms=${Date.now() - started}`);
   throw new AiError(
     quota
       ? "The AI's usage limit is used up for now. Couldn't summarise: try again later or ask the workspace owner to raise the Gemini quota."

@@ -12,6 +12,7 @@ export function OnboardingForm({ email }: { email: string }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(email.split("@")[0] ?? "");
   const [workspaceName, setWorkspaceName] = useState("");
+  const [withDemo, setWithDemo] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,8 +25,8 @@ export function OnboardingForm({ email }: { email: string }) {
     setBusy(true);
     setError("");
     try {
-      await apiJson("/api/onboarding", { body: { displayName, workspaceName } });
-      router.replace("/app");
+      const r = await apiJson<{ demoProjectId?: string | null }>("/api/onboarding", { body: { displayName, workspaceName, withDemo } });
+      router.replace(r.demoProjectId ? `/app/projects/${r.demoProjectId}?demo=1` : "/app");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save. Try again.");
@@ -57,13 +58,22 @@ export function OnboardingForm({ email }: { email: string }) {
               autoComplete="organization"
             />
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 size-4" checked={withDemo} onChange={(e) => setWithDemo(e.target.checked)} />
+            <span>
+              Add a demo project
+              <span className="text-muted-foreground block text-xs">
+                A sample client with real feedback to try every step in 5 minutes. It doesn&apos;t count towards your plan.
+              </span>
+            </span>
+          </label>
           {error && (
             <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           )}
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Setting up…" : "Continue"}
+            {busy ? (withDemo ? "Setting up your workspace and demo…" : "Setting up…") : "Continue"}
           </Button>
         </form>
       </CardContent>

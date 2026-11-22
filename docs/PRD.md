@@ -213,7 +213,10 @@ workspaces(name, owner_id, plan text default 'free')
 members(workspace_id, user_id, role text check (role in ('owner','am','creative')))
 profiles(user_id, display_name, email, nexconn_user_id unique)
 projects(workspace_id, client_name, approver_id, rounds_included int default 2,
-         client_channel_id text, internal_channel_id text, archived bool default false)
+         client_channel_id text, internal_channel_id text, archived bool default false,
+         is_demo bool default false)
+        -- R5: is_demo = the seeded demo project (doesn't count towards the Free plan);
+        --     archived = team-only (clients lose access and leave the client room)
 project_guests(project_id, user_id, role text check (role in ('approver','reviewer')))
 invites(project_id, email_or_phone, display_name, role, token_hash, expires_at, revoked_at,
         first_used_at, last_used_at, used_by, created_by)
@@ -238,6 +241,8 @@ drift_alerts(deliverable_id, version_id, kind text ('feedback'|'version'|'scope'
         --     toVersion, itemIds, state checking|ready, aiChecked, results, decision sent|back|superseded)
 approvals(version_id, approver_id, approved_at, copy_snapshot, asset_sha256)  -- insert only
 jobs(kind, payload jsonb, status, attempts int, last_error)
+        -- R5: used for background work (transcribe, drift-check): 3 attempts, ids-only payload
+rate_limits(key, window_start, hits)  -- R5: server-only fixed-window counters (keyed hashes)
 ```
 
 **Status values.** Deliverable: `draft, in_review, changes_requested, approved` (R4: `draft` = a new version held for the drift check, not yet in the client room). Card (message metadata) adds `superseded` for older versions. Change item: `suggested, confirmed, rejected, done, missing, reversed, needs_check`.
@@ -280,7 +285,7 @@ Status changes are written through message extensions/metadata from the server o
 | --- | --- |
 | `POST /api/nexconn/token` | Nexconn token for the signed-in user (creates the Nexconn user on first call) |
 | `POST /api/nexconn/webhook` | Verify signature, store message, queue jobs, return 200 fast |
-| `POST /api/projects`, `PATCH /api/projects/:id` | Create a project (+ 2 channels + bot), set approver and rounds |
+| `POST /api/projects`, `PATCH /api/projects/:id` | Create a project (+ 2 channels + bot), set approver and rounds (R5: archive/restore; Free plan = 2 active non-demo clients) |
 | `POST /api/invites`, `POST /api/join/:token` | Create and accept magic-link invites |
 | `POST /api/deliverables`, `POST /api/deliverables/:id/versions` | Create a deliverable or a new version (posts the card) |
 | `POST /api/versions/:id/approve`, `POST /api/versions/:id/request-changes` | Approver actions (server checks role) |
@@ -291,6 +296,8 @@ Status changes are written through message extensions/metadata from the server o
 | `POST /api/voice`, `GET /api/voice/:id` | Upload a recorded voice note and post it to the room; access-checked playback (R3: ChatUI Web has no recorder) |
 | `GET /api/projects/:id/ledger.csv` | Ledger export (R4: same filters as the page: deliverable, approver, from, to, q) |
 | `POST /api/drift/:id` | AM decision on a held version: `send` (post to client) or `back` (to the creative) (R4) |
+| `POST /api/demo` | Add the demo project to the caller's workspace, once (R5; onboarding can also pass `withDemo`) |
+| `POST /api/client-error` | Browser crash report (class + stack frames only) to Sentry (R5) |
 
 ### Screens
 

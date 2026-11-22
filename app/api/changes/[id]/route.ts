@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/db/supabase-server";
 import { manageableItem } from "@/lib/feedback/access";
 import { setItemOnCard } from "@/lib/feedback/summarise";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("confirm") }),
@@ -24,8 +25,14 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/changes/[id]">
     const res = await manageableItem(id);
     if (!res.ok) return jsonError(res.status, MSG[res.status]);
     const { item, access, cardMessageId } = res;
+    const limited = await rateLimit(req, "changes", LIMITS.write, access.userId);
+    if (limited) return limited;
     if (!["suggested", "confirmed", "rejected"].includes(item.status)) {
       return jsonError(409, "This item was already checked against a new version.");
+    }
+    // The approver settled this conflict (FR-12): the team can't bring back the option they turned down.
+    if (item.conflict_id && item.status === "rejected" && input.action !== "reject") {
+      return jsonError(409, "The approver chose the other option for this conflict.");
     }
     const patch =
       input.action === "edit"

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -199,6 +200,19 @@ export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolea
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create account" : "Sign in"}
               </Button>
+              {mode === "signup" && (
+                <p className="text-muted-foreground text-center text-xs">
+                  By creating an account you agree to the{" "}
+                  <Link href="/terms" className="underline" target="_blank">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="underline" target="_blank">
+                    Privacy policy
+                  </Link>
+                  .
+                </p>
+              )}
             </form>
             {emailEnabled && (
             <button

@@ -15,6 +15,9 @@ import { canUploadVersions } from "@/lib/auth/permissions";
 import { latestVersionAlerts, type VersionAlert } from "@/lib/drift/check";
 import { loadDashboard } from "@/lib/dashboard/load";
 import { ProjectDashboard } from "./project-dashboard";
+import { DemoGuide } from "./demo-guide";
+import { demoProgress } from "@/lib/demo/progress";
+import { ArchiveButton } from "../../archive-button";
 import { driftCounts, sendLabel } from "@/lib/drift/rules";
 
 /** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
@@ -91,9 +94,10 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
     canManage ? listInvites(project.id) : [],
     listDeliverables(project.id),
   ]);
-  const [alerts, dashboard] = await Promise.all([
+  const [alerts, dashboard, demo] = await Promise.all([
     latestVersionAlerts(deliverables.map((d) => d.id)),
     loadDashboard(deliverables, project.rounds_included),
+    project.is_demo && canManage ? demoProgress(project.id) : Promise.resolve(null),
   ]);
   const nameOf = new Map(guests.map((g) => [g.user_id, g.display_name]));
   const deliverableRows: DeliverableRow[] = deliverables.map((d) => {
@@ -129,9 +133,15 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
           <Link href="/app" className="text-muted-foreground text-sm hover:underline">
             ← Projects
           </Link>
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{project.client_name}</h1>
+          <h1 className="truncate text-2xl font-semibold tracking-tight">
+            {project.client_name}
+            {project.archived && <span className="text-muted-foreground ml-2 align-middle text-sm font-normal">(archived)</span>}
+          </h1>
         </div>
+        {canManage && <ArchiveButton projectId={project.id} archived={project.archived} redirectTo={project.archived ? undefined : "/app"} />}
       </div>
+
+      {demo && <DemoGuide projectId={project.id} progress={demo} />}
 
       <ProjectDashboard projectId={project.id} data={dashboard} canManage={canManage} />
 

@@ -5,6 +5,7 @@ import { deleteDeliverable, insertDeliverable, insertVersion, setVersionCard } f
 import { postDeliverableCard } from "@/lib/deliverables/cards-server";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { inspectUpload, UploadError } from "@/lib/storage";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 const body = z.object({
   projectId: z.uuid(),
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
   try {
     const res = await routeProjectAccess(input.projectId);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const limited = await rateLimit(req, "deliverables", LIMITS.upload, res.access.userId);
+    if (limited) return limited;
     const access = res.access;
     if (access.kind !== "member" || !canManageProjects(access.role)) {
       return jsonError(403, "Only owners and account managers can post deliverables.");

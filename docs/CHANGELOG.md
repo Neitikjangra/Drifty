@@ -1,5 +1,80 @@
 # Changelog
 
+## Round 5: production hardening and launch surface (2026-11-22)
+
+**Built**
+- **Landing page** with the value proposition, the drifts Drifty tracks, a 3-step how it works,
+  **pricing** (Free: 2 active clients; Pilot: contact), FAQ and a "Start free" CTA.
+  **Privacy** and **Terms** pages are honest pilot drafts with a visible "draft" notice: AI
+  processing, processors and regions, cookies, deletion by email. Sign-up links to both.
+- **First-run demo:** onboarding has "Add a demo project" (on by default). It seeds *Demo · Sunrise
+  Cafe* with two demo client people (Priya the approver, Rahul a reviewer, each with a personal
+  link), a v1 design card, and their conflicting feedback.
+  - A **Demo guide** on the project page walks through all 6 steps and ticks them off from the
+    real data: summarise → settle the conflict as Priya → confirm → v2 missing the CTA → v3 → approve
+    and ledger.
+  - The demo doesn't count towards the plan. "Try the demo project" adds one later.
+- **Free plan enforced:** 2 active clients, demo excluded. Projects can be **archived** and
+  **restored**, so a free agency is never stuck.
+  - Archived projects stay readable for the team (history and ledger), but clients lose access
+    and are removed from the client room.
+  - The projects list shows plan usage and an Archived section.
+- **Rate limits** shared across serverless instances in Postgres, keyed by hashed user id and IP,
+  with a friendly 429 and Retry-After:
+  - join: 20 per 10 min per IP
+  - sign-in callback: 30 per 10 min per IP
+  - uploads and voice: 60 per hour per user
+  - AI (summarise, versions): 30 per hour per user
+  - writes and chat tokens: per user and IP
+- **Sentry** through its HTTP API, on when `SENTRY_DSN` is set. It covers route errors, render
+  errors (instrumentation) and browser crashes (`/api/client-error`), and sends the error class and
+  stack only, never message text.
+- **Error pages:** friendly `error`, `global-error` and 404 pages.
+- **Security headers:** a CSP that can't break ChatUI (no framing, plugins or foreign form
+  targets), plus HSTS, nosniff, Referrer-Policy (no-referrer on invite pages) and a
+  Permissions-Policy that allows the microphone only for us.
+- **Reliability:** transcription and the drift check run as `jobs` with 3 attempts and are
+  recorded (ids only). The drift check is safe to retry: it reuses a saved AI result and never posts
+  twice.
+- **Tests:** a Playwright demo-path test (`pnpm test:demo`, phone viewport), E2E Round 5 (28
+  checks) and a demo seed script (`pnpm seed:demo <email>`, localhost only).
+- **Docs:** `docs/SUBMISSION.md` (write-up) and `docs/DEMO_SCRIPT.md` (3-minute video).
+
+**Fixed (found while testing)**
+- **Summarise and the drift check were failing in production** with Gemini 400 "deadline too
+  short". Yesterday's 8 s fail-fast timeout was below Gemini's 10 s minimum. Timeouts are now
+  clamped to 10 s or more.
+- **Demo feedback could be skipped:** message times came from the server clock, which can be a
+  little behind the database's time for v1. They're now based on v1's database timestamp.
+- **The approver's conflict choice could be overridden:** the team could Confirm the option the
+  approver turned down. That now returns 409.
+- **The app font never loaded:** `--font-sans` pointed at itself, so every page fell back to a
+  serif font. It now uses Geist.
+- **AI-1 sometimes merged opposite requests into one "question" item,** which hid the conflict and
+  skipped the drift check. The prompt now keeps each person's request as its own item.
+- **The demo seed failed once in testing** (database error, not reproduced in 4 retries).
+  Onboarding now retries it once and logs the failing operation. If both attempts fail, the user
+  gets the "Try the demo project" button.
+
+**Try it**
+1. On a phone, open https://drifty-six.vercel.app and tap **Start free**. Create an account and keep
+   "Add a demo project" ticked.
+2. Follow the **Demo guide**. For step 2, open Priya's link in a private window or on a second
+   phone.
+3. Try a third real client on the Free plan: you're asked to archive one or ask about the Pilot.
+
+**Checks:** lint, typecheck, 57 unit tests, E2E Rounds 1-5 (67 + 36 + 33/34 + 38 + 28; the Round 3
+miss is the 15 s target, 16.0 s on the slower backup model), and the Playwright demo path on a
+phone-sized screen, which passed on the final build (2.8 min, real Gemini). Of the last three
+runs, two passed and one hit the demo-seed error now retried; earlier runs surfaced the fixes above. Landing checked at 375 px with no
+horizontal scroll.
+
+**Known issues**
+- Safari hasn't been tested (no Safari here). The client room uses ChatUI, whose docs list portrait
+  mobile browsers as unsupported; it works in Chrome at 375 px. A real-phone test is still a human
+  task.
+- The Playwright test creates an agency account, so it runs against a local server, not production.
+
 ## Round 4: drift check, ledger, dashboard (FR-11, FR-13 full, FR-14) (2026-11-22)
 
 **Built**

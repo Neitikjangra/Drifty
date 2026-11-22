@@ -5,12 +5,13 @@ import { supabaseAdmin } from "@/lib/db/supabase-server";
 import { handleRouteError, jsonError, ok } from "@/lib/http";
 import { sendGroupMessage, setGroupMessageMetadata } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/changelists/:id/brief: the AM sends the confirmed items to the team as the
  * creative's brief (FR-9), in the internal room. Nothing goes to the client.
  */
-export async function POST(_req: Request, ctx: RouteContext<"/api/changelists/[id]/brief">) {
+export async function POST(req: Request, ctx: RouteContext<"/api/changelists/[id]/brief">) {
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return jsonError(404, "Change list not found.");
   try {
@@ -23,6 +24,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/changelists/[i
     if (!v || !d) return jsonError(404, "Change list not found.");
     const res = await routeProjectAccess(d.project_id);
     if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Change list not found.");
+    const limited = await rateLimit(req, "brief", LIMITS.write, res.access.userId);
+    if (limited) return limited;
     if (res.access.kind !== "member" || !canManageProjects(res.access.role)) {
       return jsonError(403, "Only owners and account managers can send the brief.");
     }

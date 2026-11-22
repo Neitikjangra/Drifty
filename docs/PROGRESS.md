@@ -4,7 +4,7 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 4 built, awaiting "approved"** (Round 3 approved 2026-11-22) (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
+- Round: **Round 5 built, awaiting "approved"** (Rounds 3-4 approved 2026-11-22) (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-22
@@ -82,19 +82,24 @@ JSON-schema output); its internal retries hide overload for minutes, so retries 
 - [x] Ledger page + CSV export (filters, formula-safe, BOM)
 - [x] Project dashboard (status, open items, waiting on, rounds used + rounds included editor)
 - [x] Checks (55 unit, E2E 67+36+33+38), changelog, PRD section 6 updated
-- [ ] Deployed + user Try-it → "approved"
+- [x] Deployed; approved 2026-11-22
 
 **Round 4 lessons:** the drift check compares against the last version the *client saw* (card id
 set), not the previous number, so a sent-back v2 doesn't reset the list for v3. Clients' asset
 access hides held/skipped versions, but not a just-posted card (its id is saved a moment later).
 
 ## Round 5: production hardening + launch surface
-- [ ] Landing, pricing, FAQ, privacy/terms (legal text from team)
-- [ ] Onboarding with seeded demo project
-- [ ] RLS/route audit, rate limits, Sentry, error states, mobile client room
-- [ ] Playwright demo-path test vs production
-- [ ] SUBMISSION.md, DEMO_SCRIPT.md, seed script
-- [ ] Checks, deploy, changelog, report
+- [x] Landing, pricing, FAQ, privacy/terms (pilot drafts; legal review = human task)
+- [x] Onboarding with seeded demo project + Demo guide; Free plan limit + archive/restore
+- [x] Route audit (every route re-checks access; limits added), rate limits, Sentry (DSN = human), error pages, headers, jobs retries
+- [x] Playwright demo-path test (local prod build; creates accounts, so not run against production)
+- [x] docs/SUBMISSION.md, docs/DEMO_SCRIPT.md, `pnpm seed:demo`
+- [x] Checks (57 unit, E2E 67+36+33+38+28, Playwright), changelog, PRD section 6
+- [ ] Deployed + user Try-it on a real phone, then "approved"
+
+**Round 5 lessons:** Gemini rejects request deadlines under 10 s (the SDK forwards ours). Inside
+Suspense, `notFound()` streams the 404 page with HTTP 200. ChatUI only renders messages near the
+viewport, so UI tests must scroll to older cards. Seeded data must use the database's clock.
 
 ## Round 6: Should items (only if approved)
 - [ ] FR-17 nudges

@@ -14,6 +14,7 @@ export interface ChangeItemRow {
   status: string;
   author_ids: string[];
   source_msg_ids: string[];
+  conflict_id: string | null;
 }
 
 /** Loads a change item and checks the caller is an owner/AM of its project. */
@@ -23,7 +24,7 @@ export async function manageableItem(
   if (!/^[0-9a-f-]{36}$/.test(itemId)) return { ok: false, status: 404 };
   const { data } = await supabaseAdmin()
     .from("change_items")
-    .select("id, version_id, change_list_id, position, text, type, status, author_ids, source_msg_ids")
+    .select("id, version_id, change_list_id, position, text, type, status, author_ids, source_msg_ids, conflict_id")
     .eq("id", itemId)
     .maybeSingle();
   const item = data as ChangeItemRow | null;
