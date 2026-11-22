@@ -89,5 +89,5 @@ AI rules, all enforced in code:
 - **Rate limits:** auth, join, upload, AI and write routes, per user and per IP (shared in Postgres).
 - **Monitoring:** Sentry via `SENTRY_DSN` (error class and stack only, no message text). Background
   jobs retry 3 times and are recorded in `jobs`. Health check at `/api/health`.
-- **Tests:** 57 unit tests, 5 end-to-end suites (over 200 checks) and a Playwright demo-path test on a
+- **Tests:** 69 unit tests, 6 end-to-end suites (225 checks, all passing) and a Playwright demo-path test on a
   phone-sized screen.
