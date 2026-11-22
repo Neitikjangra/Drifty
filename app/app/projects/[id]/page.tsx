@@ -15,6 +15,7 @@ import { canUploadVersions } from "@/lib/auth/permissions";
 import { latestVersionAlerts, type VersionAlert } from "@/lib/drift/check";
 import { loadDashboard } from "@/lib/dashboard/load";
 import { ProjectDashboard } from "./project-dashboard";
+import { InternalSummariseBar } from "@/components/chat/internal-summarise";
 import { DemoGuide } from "./demo-guide";
 import { demoProgress } from "@/lib/demo/progress";
 import { ArchiveButton } from "../../archive-button";
@@ -134,7 +135,20 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row">
         {tabs.length && appKey ? (
-          <RoomView appKey={appKey} rooms={tabs} projectId={project.id} canManage={canManage} className="h-[70dvh] lg:h-auto lg:min-h-[560px] lg:flex-1" />
+          <RoomView
+            appKey={appKey}
+            rooms={tabs}
+            projectId={project.id}
+            canManage={canManage}
+            className="h-[70dvh] lg:h-auto lg:min-h-[560px] lg:flex-1"
+            internalBar={
+              canManage ? (
+                <Suspense fallback={null}>
+                  <InternalSummarise projectId={project.id} clientChannelId={project.client_channel_id} />
+                </Suspense>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border p-6 text-sm">
             This project&apos;s rooms aren&apos;t available right now.
@@ -193,4 +207,13 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
       <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
     </>
   );
+}
+
+/** Summarise shortcuts for the Internal room: deliverables in review or with changes requested. */
+async function InternalSummarise({ projectId, clientChannelId }: { projectId: string; clientChannelId: string | null }) {
+  const deliverables = await getDeliverables(projectId);
+  const items = deliverables
+    .filter((d) => d.status === "in_review" || d.status === "changes_requested")
+    .map((d) => ({ id: d.id, title: d.title, version: d.current_version }));
+  return <InternalSummariseBar projectId={projectId} clientChannelId={clientChannelId} items={items} />;
 }

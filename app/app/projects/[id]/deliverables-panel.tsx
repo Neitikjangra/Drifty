@@ -270,7 +270,10 @@ function DeliverableItem({
           (synced ? ` (${synced} new message${synced === 1 ? "" : "s"} picked up from the room.)` : ""),
       });
     } catch (err) {
-      setSummary({ busy: false, error: true, text: err instanceof Error ? err.message : "Couldn't summarise, try again." });
+      const msg = err instanceof Error ? err.message : "Couldn't summarise, try again.";
+      // Not an error: just nothing new from the client yet.
+      if (/No client feedback/.test(msg)) setSummary({ busy: false, error: false, text: `No new client feedback since v${item.version}.` });
+      else setSummary({ busy: false, error: true, text: msg });
     }
   }
   const [open, setOpen] = useState(false);

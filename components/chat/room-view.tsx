@@ -66,6 +66,7 @@ export function RoomView({
   canApprove = false,
   canManage = false,
   projectId,
+  internalBar,
 }: {
   appKey: string;
   rooms: RoomTab[];
@@ -76,6 +77,8 @@ export function RoomView({
   canManage?: boolean;
   /** Enables voice notes for this project's rooms. */
   projectId?: string;
+  /** Shown above the chat while the Internal tab is open (e.g. Summarise shortcuts). */
+  internalBar?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<ChatHostHandle | null>(null);
@@ -176,6 +179,7 @@ export function RoomView({
       )}
 
       {phase.kind === "ready" && <LinkBar state={link} />}
+      {internalBar && active?.label === "Internal" && internalBar}
 
       {phase.kind === "loading" && (
         <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border text-sm" role="status">
