@@ -10,7 +10,7 @@
 | GitHub | https://github.com/Neitikjangra/drifty |
 | Demo video | _(fill in)_ |
 | Nexconn App Key | _(fill in from the Nexconn Console; the public client key, not the App Secret)_ |
-| Try-it QR | _(QR code for the live URL)_ |
+| Try-it QR | _(make one for https://drifty-six.vercel.app with any QR generator and paste it here)_ |
 
 ## 1. Problem and evidence
 
@@ -58,7 +58,7 @@ version quietly misses a change, and later "I never approved that". (Sources: do
 | Workspaces | 46 | 4 |
 | Projects | 99 | 4 |
 | Nexconn group channels | 198 | 8 |
-| Nexconn users (profiles) | 197 | _(fill in)_ |
+| Nexconn users (profiles) | 197 | 10 |
 | Messages stored | 212 | 7 |
 | AI change lists | 36 | |
 | Drift / conflict / scope alerts | 67 | |
