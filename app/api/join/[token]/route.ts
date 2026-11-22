@@ -54,7 +54,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/join/[token]">)
         email: invite.email_or_phone.includes("@") ? invite.email_or_phone : (existing?.email ?? null),
         nexconn_user_id: existing?.nexconn_user_id ?? nexconnUserId(guestId),
       };
-      await upsertProfile(profile);
+      // One retry: a dropped connection here would leave the client stuck on the join page.
+      // (An upsert, so repeating it is safe.)
+      await upsertProfile(profile).catch(() => upsertProfile(profile!));
     }
 
     // Re-add if they were removed (e.g. link cancelled then re-issued); keep a changed role.

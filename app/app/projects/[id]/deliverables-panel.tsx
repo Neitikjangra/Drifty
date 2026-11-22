@@ -234,11 +234,33 @@ function DeliverableItem({
   const router = useRouter();
   const held = item.status === "draft" && item.drift;
   // While AI-3 runs, refresh every few seconds so the result shows up by itself.
+  // While AI-3 runs, poll this check's status (cheap) and show the result as soon as it's ready.
+  const [liveDrift, setLiveDrift] = useState<NonNullable<DeliverableRow["drift"]> | null>(null);
+  const drift = liveDrift && liveDrift.alertId === item.drift?.alertId ? liveDrift : item.drift;
   useEffect(() => {
-    if (!(held && item.drift?.state === "checking")) return;
-    const t = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(t);
-  }, [held, item.drift?.state, router]);
+    const d = item.drift;
+    if (!(held && d && d.state === "checking")) return;
+    let stop = false;
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/drift/${d.alertId}`, { cache: "no-store" });
+        if (!r.ok || stop) return;
+        const j = (await r.json()) as Pick<NonNullable<DeliverableRow["drift"]>, "state" | "toVersion" | "counts" | "sendLabel">;
+        if (j.state !== "checking") {
+          stop = true;
+          clearInterval(t);
+          setLiveDrift({ ...d, ...j });
+          router.refresh();
+        }
+      } catch {
+        // keep polling
+      }
+    }, 3000);
+    return () => {
+      stop = true;
+      clearInterval(t);
+    };
+  }, [held, item.drift, router]);
   const [decision, setDecision] = useState<{ busy: "" | "send" | "back"; error: string }>({ busy: "", error: "" });
   async function decide(action: "send" | "back") {
     if (!item.drift) return;
@@ -322,7 +344,7 @@ function DeliverableItem({
           {new Date(item.approval.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </p>
       )}
-      {item.status === "draft" && item.drift && <DriftStatus drift={item.drift} canDecide={canSummarise} decision={decision} onDecide={decide} />}
+      {item.status === "draft" && drift && <DriftStatus drift={drift} canDecide={canSummarise} decision={decision} onDecide={decide} />}
       {canSummarise && item.status !== "approved" && item.status !== "draft" && (
         <div className="space-y-1">
           <Button size="sm" onClick={summarise} disabled={summary.busy}>

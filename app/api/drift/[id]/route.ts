@@ -5,7 +5,7 @@ import { getDeliverable, getVersion, setVersionCard, transitionDeliverable } fro
 import { supabaseAdmin } from "@/lib/db/supabase-server";
 import { postDeliverableCard, setCardStatus } from "@/lib/deliverables/cards-server";
 import { getVersionAlert, lastSentVersion, setDriftCardStatus } from "@/lib/drift/check";
-import { backToCreativeText } from "@/lib/drift/rules";
+import { backToCreativeText, driftCounts, sendLabel } from "@/lib/drift/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { sendGroupMessage } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
@@ -15,6 +15,32 @@ import { runJob } from "@/lib/jobs";
 import { after } from "next/server";
 
 const body = z.object({ action: z.enum(["send", "back"]) });
+
+/**
+ * GET /api/drift/:id: the check's current state for the deliverables panel (agency members only).
+ * Lets the panel show the result the moment AI-3 finishes, without a full page refresh.
+ */
+export async function GET(_req: Request, ctx: RouteContext<"/api/drift/[id]">) {
+  const { id } = await ctx.params;
+  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonError(404, "Not found.");
+  try {
+    const alert = await getVersionAlert(id);
+    const d = alert ? await getDeliverable(alert.deliverable_id) : null;
+    if (!alert || !d) return jsonError(404, "Not found.");
+    const res = await routeProjectAccess(d.project_id);
+    if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Not found.");
+    if (res.access.kind !== "member") return jsonError(404, "Not found.");
+    const results = alert.detail.results ?? [];
+    return ok({
+      state: alert.resolved_at ? (alert.detail.decision ?? "sent") : alert.card_message_id ? "ready" : alert.detail.state,
+      toVersion: alert.detail.toVersion,
+      counts: results.length ? driftCounts(results) : null,
+      sendLabel: sendLabel(results, alert.detail.toVersion),
+    });
+  } catch (err) {
+    return handleRouteError("drift/status", err);
+  }
+}
 
 /**
  * POST /api/drift/:id: the AM's decision on a held version (FR-11).
