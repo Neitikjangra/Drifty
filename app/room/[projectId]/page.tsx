@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { RoomView } from "@/components/chat/room-view";
+import { PushToggle } from "@/components/push-toggle";
 import { getCaller, projectAccess } from "@/lib/access";
 import { isProjectApprover } from "@/lib/auth/permissions";
 
@@ -40,7 +41,10 @@ async function GuestRoom({ params }: { params: PageProps<"/room/[projectId]">["p
     <main className="flex h-dvh flex-col gap-2 p-2 sm:p-4">
       <header className="flex items-center justify-between gap-2 px-1">
         <h1 className="truncate text-base font-semibold">{access.project.client_name}</h1>
-        {access.role === "approver" && <span className="text-muted-foreground text-xs">You&apos;re the approver</span>}
+        <div className="flex shrink-0 items-center gap-3">
+          {access.role === "approver" && <span className="text-muted-foreground text-xs">You&apos;re the approver</span>}
+          <PushToggle compact />
+        </div>
       </header>
       <RoomView
         appKey={appKey}

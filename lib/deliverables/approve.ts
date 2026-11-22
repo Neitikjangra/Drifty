@@ -4,6 +4,7 @@ import type { ProjectAccess } from "@/lib/access";
 import { insertApproval, transitionDeliverable, updateDeliverable, type Deliverable, type Version } from "@/lib/db/deliverables";
 import { postReceipt, setCardStatus } from "./cards-server";
 import { canAct } from "./rules";
+import { notifyDecision } from "@/lib/push/send";
 
 export type ApproveResult = { ok: true; approvalId: string; approvedAt: string; actedBy: string } | { ok: false; status: 409; error: string };
 
@@ -39,5 +40,6 @@ export async function approveVersion(v: Version, d: Deliverable, access: Project
   const approvedAt = approval.approved_at;
   // The receipt doesn't need to block the approver's tap.
   after(() => postReceipt(access.project, d, v, name, approvedAt).catch(() => {}));
+  after(() => notifyDecision(access.project, "approved", { userId: access.userId, name }, d.title, v.number).catch(() => {}));
   return { ok: true, approvalId: approval.id, approvedAt, actedBy: name };
 }

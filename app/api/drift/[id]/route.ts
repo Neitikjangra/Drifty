@@ -10,6 +10,7 @@ import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { sendGroupMessage } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { notifyNewVersion } from "@/lib/push/send";
 import { checkScope } from "@/lib/round6/scope";
 import { runJob } from "@/lib/jobs";
 import { after } from "next/server";
@@ -103,6 +104,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/drift/[id]">) {
       ]);
       // FR-15: a new round reached the client; warn the AM if it's at/over the included rounds.
       after(() => runJob("scope-check", { deliverableId: d.id }, () => checkScope(project, d.id)));
+      after(() => notifyNewVersion(project, d.title, to.number).catch(() => {}));
       return ok({ decision: "sent", version: to.number });
     }
 

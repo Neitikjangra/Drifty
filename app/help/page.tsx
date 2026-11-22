@@ -42,6 +42,15 @@ const GUIDES = [
     ],
   },
   {
+    q: "Get alerts on your phone",
+    steps: [
+      "Tap the bell (Alerts) at the top of Drifty or the client room, then Allow.",
+      "Your team gets an alert for client feedback, approvals and change requests. Clients get one when a version is ready to review.",
+      "On iPhone, first add Drifty to the Home Screen (Share → Add to Home Screen), open it from there, then tap the bell.",
+      "Alerts never show message text. Tap the bell again to turn them off on that device.",
+    ],
+  },
+  {
     q: "Client can't open their link",
     steps: [
       "Links last 30 days. In Client people, use Copy link again or New link.",

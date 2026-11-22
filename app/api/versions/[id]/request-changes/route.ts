@@ -6,6 +6,7 @@ import { postTextAs, setCardStatus } from "@/lib/deliverables/cards-server";
 import { canAct } from "@/lib/deliverables/rules";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { notifyDecision } from "@/lib/push/send";
 
 const body = z.object({ note: z.string().trim().max(2000).optional() });
 
@@ -31,6 +32,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/versions/[id]/r
     }
     const name = access.profile?.display_name ?? "Approver";
     await setCardStatus(access.project, v, "changes_requested", name);
+    const project = access.project;
+    after(() => notifyDecision(project, "changes", { userId: access.userId, name }, d.title, v.number).catch(() => {}));
     const note = input.note;
     const profile = access.profile;
     if (note && profile) {

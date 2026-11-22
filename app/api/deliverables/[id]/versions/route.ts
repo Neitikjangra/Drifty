@@ -16,6 +16,7 @@ import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { inspectUpload, UploadError } from "@/lib/storage";
 import { createVersionAlert, driftItems, lastSentVersion, runDriftCheck, supersedeOpenAlerts } from "@/lib/drift/check";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { notifyNewVersion } from "@/lib/push/send";
 import { runJob } from "@/lib/jobs";
 import { checkScope } from "@/lib/round6/scope";
 
@@ -87,6 +88,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
     ]);
     // FR-15: a new round reached the client; warn the AM if it's at/over the included rounds.
     const scopeProject = access.project;
+    after(() => notifyNewVersion(scopeProject, d.title, next.number).catch(() => {}));
     after(() => runJob("scope-check", { deliverableId: d.id }, () => checkScope(scopeProject, d.id)));
     return ok({ versionId: v.id, version: next.number, held: false }, 201);
   } catch (err) {

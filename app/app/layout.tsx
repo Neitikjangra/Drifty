@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getCaller } from "@/lib/access";
 import { Logo } from "@/components/brand/logo";
+import { PushToggle } from "@/components/push-toggle";
 
 export default function AppLayout({ children }: LayoutProps<"/app">) {
   return (
@@ -37,6 +38,7 @@ async function AccountBar() {
       {caller.membership && (
         <span className="text-muted-foreground hidden truncate sm:inline">{caller.membership.workspace.name}</span>
       )}
+      {caller.profile && <PushToggle compact />}
       <Link href="/help" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
         Help
       </Link>

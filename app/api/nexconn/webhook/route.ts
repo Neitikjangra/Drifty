@@ -5,6 +5,7 @@ import { projectForChannel, storeMessage } from "@/lib/messages/store";
 import { transcribeVoice } from "@/lib/messages/voice";
 import { runJob } from "@/lib/jobs";
 import { maybeAskApproval } from "@/lib/round6/approval-check";
+import { notifyRoomMessage } from "@/lib/push/send";
 
 /**
  * POST /api/nexconn/webhook: Nexconn `message:send` events (FR-8 input).
@@ -43,6 +44,9 @@ export async function POST(req: Request) {
       // FR-16: a vague "ok"/👍 from the approver gets a "Does this approve all of vX?" card.
       if (res.inserted && m.kind === "text") {
         after(() => maybeAskApproval(project, m).catch(() => console.warn("[webhook] approval check failed")));
+      }
+      if (res.inserted && (m.kind === "text" || m.kind === "voice")) {
+        after(() => notifyRoomMessage(project, m.channelId, m.authorId).catch(() => console.warn("[webhook] push failed")));
       }
       if (res.inserted && m.kind === "voice" && m.voiceRemoteUrl) {
         const id = m.nexconnMsgId;

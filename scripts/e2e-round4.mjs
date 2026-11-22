@@ -229,5 +229,21 @@ check("client can't share the report", [403, 404].includes((await approver.req(`
 check("anonymous can't share the report", (await stranger.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: istNow } })).status === 401);
 check("empty month can't be shared", (await am.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: "2020-01" } })).status === 409);
 
+
+// Push notifications: subscribe/unsubscribe per device, server-checked
+const fakeSub = (tag) => ({ endpoint: `https://push.example.invalid/drifty-e2e-${tag}-${Date.now()}`, keys: { p256dh: "B".repeat(87), auth: "a".repeat(22) } });
+const amSub = fakeSub("am");
+const subRes = await am.req("/api/push/subscribe", { method: "POST", body: amSub });
+check("AM turns on alerts", subRes.status === 201, `${subRes.status} ${subRes.text.slice(0, 80)}`);
+const clientSub = fakeSub("client");
+check("client turns on alerts", (await approver.req("/api/push/subscribe", { method: "POST", body: clientSub })).status === 201);
+check("anonymous can't turn on alerts", (await stranger.req("/api/push/subscribe", { method: "POST", body: fakeSub("x") })).status === 401);
+check("non-https endpoint is refused", (await am.req("/api/push/subscribe", { method: "POST", body: { ...fakeSub("y"), endpoint: "http://push.example.invalid/x" } })).status === 400);
+const { data: subRows } = await admin.from("push_subscriptions").select("endpoint").in("endpoint", [amSub.endpoint, clientSub.endpoint]);
+check("both devices stored", subRows?.length === 2, `${subRows?.length}`);
+const off = await am.req("/api/push/subscribe", { method: "DELETE", body: { endpoint: amSub.endpoint } });
+const { data: left } = await admin.from("push_subscriptions").select("endpoint").eq("endpoint", amSub.endpoint);
+check("AM turns alerts off", off.status === 200 && left?.length === 0, `${off.status}`);
+await admin.from("push_subscriptions").delete().like("endpoint", "https://push.example.invalid/%");
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

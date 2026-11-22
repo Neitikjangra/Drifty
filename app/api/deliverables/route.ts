@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { routeProjectAccess } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
@@ -6,6 +7,7 @@ import { postDeliverableCard } from "@/lib/deliverables/cards-server";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { inspectUpload, UploadError } from "@/lib/storage";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { notifyNewVersion } from "@/lib/push/send";
 
 const body = z.object({
   projectId: z.uuid(),
@@ -47,6 +49,8 @@ export async function POST(req: Request) {
       });
       const messageId = await postDeliverableCard(access.project, d, v);
       await setVersionCard(v.id, messageId);
+      const project = access.project;
+      after(() => notifyNewVersion(project, d.title, 1).catch(() => {}));
       return ok({ id: d.id, versionId: v.id }, 201);
     } catch (err) {
       await deleteDeliverable(d.id).catch(() => {});
