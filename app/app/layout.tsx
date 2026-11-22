@@ -37,6 +37,9 @@ async function AccountBar() {
       {caller.membership && (
         <span className="text-muted-foreground hidden truncate sm:inline">{caller.membership.workspace.name}</span>
       )}
+      <Link href="/help" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+        Help
+      </Link>
       <form action="/auth/signout" method="post">
         <button type="submit" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
           Sign out

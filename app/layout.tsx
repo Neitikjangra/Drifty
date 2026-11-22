@@ -16,7 +16,12 @@ export const metadata: Metadata = {
   title: "Drifty",
   description:
     "Chat-first client rooms for agencies. AI turns client feedback into a confirmed change list, flags drift and records approvals.",
+  applicationName: "Drifty",
+  appleWebApp: { capable: true, title: "Drifty", statusBarStyle: "default" },
+  openGraph: { title: "Drifty", description: "Stop chasing client feedback on WhatsApp.", images: ["/brand/drifty-logo.png"] },
 };
+
+export const viewport = { themeColor: "#124559" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

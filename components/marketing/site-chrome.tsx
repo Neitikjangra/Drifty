@@ -17,6 +17,9 @@ export function SiteHeader() {
           <Link href="/#pricing" className="text-muted-foreground hidden px-2 hover:underline sm:inline">
             Pricing
           </Link>
+          <Link href="/help" className="text-muted-foreground hidden px-2 hover:underline sm:inline">
+            Help
+          </Link>
           <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             Sign in
           </Link>
@@ -43,6 +46,9 @@ export function SiteFooter() {
           </Link>
           <Link href="/#faq" className="hover:underline">
             FAQ
+          </Link>
+          <Link href="/help" className="hover:underline">
+            Help
           </Link>
           <span>
             Support: <SupportEmail fallback="via the app" subject="Drifty support" />
