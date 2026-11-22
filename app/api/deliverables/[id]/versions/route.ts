@@ -17,6 +17,7 @@ import { inspectUpload, UploadError } from "@/lib/storage";
 import { createVersionAlert, driftItems, lastSentVersion, runDriftCheck, supersedeOpenAlerts } from "@/lib/drift/check";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
 import { runJob } from "@/lib/jobs";
+import { checkScope } from "@/lib/round6/scope";
 
 export const maxDuration = 60; // the AI-3 drift check runs after the response
 
@@ -84,6 +85,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/deliverables/[i
       updateDeliverable(d.id, { current_version: next.number, status: next.status }),
       lastSent ? setCardStatus(access.project, lastSent, "superseded").catch(() => {}) : Promise.resolve(),
     ]);
+    // FR-15: a new round reached the client; warn the AM if it's at/over the included rounds.
+    const scopeProject = access.project;
+    after(() => runJob("scope-check", { deliverableId: d.id }, () => checkScope(scopeProject, d.id)));
     return ok({ versionId: v.id, version: next.number, held: false }, 201);
   } catch (err) {
     if (err instanceof UploadError) return jsonError(400, err.message);

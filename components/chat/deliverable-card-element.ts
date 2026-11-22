@@ -37,6 +37,10 @@ export interface CardActions {
   resolveConflict(conflictId: string, choice: "a" | "b" | "other", text?: string): Promise<void>;
   /** Owner/AM decision on a held version (FR-11). */
   decideDrift(alertId: string, action: "send" | "back"): Promise<void>;
+  /** The approver's answer to "Does this approve all of vX?" (FR-16). */
+  answerApprovalCheck(alertId: string, answer: "yes" | "no"): Promise<void>;
+  /** Owner/AM: send or discard the scope note (FR-15). */
+  decideScope(alertId: string, action: "send" | "discard", text?: string): Promise<void>;
 }
 export function getCardActions() {
   return actions;

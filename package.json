@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "db:migrate": "node scripts/migrate.mjs",
-    "test:e2e": "node scripts/e2e-round1.mjs && node scripts/e2e-round2.mjs && node scripts/e2e-round3.mjs && node scripts/e2e-round4.mjs && node scripts/e2e-round5.mjs",
+    "test:e2e": "node scripts/e2e-round1.mjs && node scripts/e2e-round2.mjs && node scripts/e2e-round3.mjs && node scripts/e2e-round4.mjs && node scripts/e2e-round5.mjs && node scripts/e2e-round6.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "test:demo": "playwright test",
     "reset-link": "node scripts/reset-password-link.mjs"

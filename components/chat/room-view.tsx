@@ -109,6 +109,8 @@ export function RoomView({
             resolveConflict: (conflictId, choice, text) =>
               post(`/api/conflicts/${conflictId}/resolve`, choice === "other" ? { choice, text } : { choice }),
             decideDrift: (alertId, action) => post(`/api/drift/${alertId}`, { action }),
+            answerApprovalCheck: (alertId, answer) => post(`/api/approval-checks/${alertId}`, { answer }),
+            decideScope: (alertId, action, text) => post(`/api/scope/${alertId}`, action === "send" ? { action, text } : { action }),
           },
         });
         if (cancelled) return;

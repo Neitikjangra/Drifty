@@ -4,7 +4,7 @@ Resume: read CLAUDE.md, docs/PRD.md, docs/SRS.md, this file and docs/CHANGELOG.m
 then continue from the first unchecked item. Rules are in docs/MASTER_PROMPT.md.
 
 ## Current status
-- Round: **Round 5 built, awaiting "approved"** (Rounds 3-4 approved 2026-11-22) (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
+- Round: **Round 6 built, awaiting "approved"** (Round 5 approved 2026-11-22) (human tasks: Nexconn webhook URL, Gemini quota/billing, SMTP, real-phone test). Prod AI_FALLBACK_MODEL=gemini-3-flash-preview,gemini-3.5-flash (approved 2026-11-22).
 - Vercel project: `neitik-jangids-projects/drifty`, production alias drifty-six.vercel.app.
   Env vars are set for **production only**. `.env.local` values in quotes must be added unquoted.
 - Last updated: 2026-11-22
@@ -95,17 +95,19 @@ access hides held/skipped versions, but not a just-posted card (its id is saved 
 - [x] Playwright demo-path test (local prod build; creates accounts, so not run against production)
 - [x] docs/SUBMISSION.md, docs/DEMO_SCRIPT.md, `pnpm seed:demo`
 - [x] Checks (57 unit, E2E 67+36+33+38+28, Playwright), changelog, PRD section 6
-- [ ] Deployed + user Try-it on a real phone, then "approved"
+- [x] Deployed; approved 2026-11-22
 
 **Round 5 lessons:** Gemini rejects request deadlines under 10 s (the SDK forwards ours). Inside
 Suspense, `notFound()` streams the 404 page with HTTP 200. ChatUI only renders messages near the
 viewport, so UI tests must scroll to older cards. Seeded data must use the database's clock.
 
 ## Round 6: Should items (only if approved)
-- [ ] FR-17 nudges
-- [ ] FR-16 approval drift
-- [ ] FR-15 scope drift
-- [ ] FR-18 daily digest
+- [x] FR-17 nudges (daily cron; unapproved + due today/tomorrow; once per version)
+- [x] FR-16 approval drift (vague ok/👍 from the approver → check card; Yes = normal approval path)
+- [x] FR-15 scope drift (at/over rounds → Scope card with AI/template note; AM sends or discards)
+- [x] FR-18 daily digest (data-only, skipped when empty)
+- [x] Checks (69 unit, E2E R6 22, R1/R2/R5), CHANGELOG, PRD section 6; CRON_SECRET set in Vercel
+- [ ] User Try-it, then "approved"; re-run the AI suites when the Gemini quota resets
 
 ## Notes / decisions
 - AI model: Gemini 3.8 Flash (`gemini-3.8-flash`); STT_API_KEY not needed.

@@ -10,6 +10,9 @@ import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
 import { sendGroupMessage } from "@/lib/nexconn/api";
 import { BOT_USER_ID } from "@/lib/nexconn/ids";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { checkScope } from "@/lib/round6/scope";
+import { runJob } from "@/lib/jobs";
+import { after } from "next/server";
 
 const body = z.object({ action: z.enum(["send", "back"]) });
 
@@ -72,6 +75,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/drift/[id]">) {
         previous && previous.id !== to.id ? setCardStatus(project, previous, "superseded").catch(() => {}) : Promise.resolve(),
         setDriftCardStatus(project, alert, "sent", name).catch(() => {}),
       ]);
+      // FR-15: a new round reached the client; warn the AM if it's at/over the included rounds.
+      after(() => runJob("scope-check", { deliverableId: d.id }, () => checkScope(project, d.id)));
       return ok({ decision: "sent", version: to.number });
     }
 

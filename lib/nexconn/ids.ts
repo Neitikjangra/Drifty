@@ -26,4 +26,6 @@ export const MSG = {
   changelist: "drifty:changelist",
   conflict: "drifty:conflict",
   drift: "drifty:drift",
+  approvalCheck: "drifty:approvalcheck",
+  scope: "drifty:scope",
 } as const;

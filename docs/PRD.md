@@ -256,6 +256,8 @@ rate_limits(key, window_start, hits)  -- R5: server-only fixed-window counters (
 | `drifty:conflict` | Client room | deliverableId, optionA{text, author}, optionB{text, author} | Choose A / Choose B / Other (approver) |
 | `drifty:drift` | Internal room | deliverableId, fromVersion, toVersion, results\[{itemId, verdict, note}\] (R4 adds: alertId, title, toVersionId, aiChecked, per-result text/type; metadata `status` open/sent/back/superseded, `by`, `at`) | Back to creative / Send to client anyway (AM) |
 | `drifty:receipt` | Client room | versionId, approver, approvedAt | None |
+| `drifty:approvalcheck` (R6) | Client room | alertId, deliverableId, versionId, version, title, quote, approver; metadata `status` open/yes/no | Yes, approve vX / No (approver) |
+| `drifty:scope` (R6) | Internal room | alertId, deliverableId, title, roundsUsed, roundsIncluded, state, draft; metadata `status` open/sent/discarded | Edit + Send to client / Discard (AM) |
 
 Status changes are written through message extensions/metadata from the server only. Clients never write status directly.
 
@@ -298,6 +300,9 @@ Status changes are written through message extensions/metadata from the server o
 | `POST /api/drift/:id` | AM decision on a held version: `send` (post to client) or `back` (to the creative) (R4) |
 | `POST /api/demo` | Add the demo project to the caller's workspace, once (R5; onboarding can also pass `withDemo`) |
 | `POST /api/client-error` | Browser crash report (class + stack frames only) to Sentry (R5) |
+| `POST /api/approval-checks/:id` | Approver answers "Does this approve all of vX?": yes = approval via the normal path (R6) |
+| `POST /api/scope/:id` | AM sends (as themselves) or discards the scope-drift note (R6) |
+| `GET /api/cron/daily` | Vercel Cron 03:30 UTC (09:00 IST), `Authorization: Bearer CRON_SECRET`: nudges + daily digest (R6) |
 
 ### Screens
 

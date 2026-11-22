@@ -1,5 +1,54 @@
 # Changelog
 
+## Round 6: Should items (FR-15, FR-16, FR-17, FR-18) (2026-11-22)
+
+**Built**
+- **FR-16 approval drift:** when the approver sends a vague "ok", 👍, "looks good" or "theek hai"
+  in the client room (outside a card) while a version is in review, Drifty AI posts "Does this
+  approve all of vX?" quoting their words.
+  - **Yes** goes through exactly the same approval path as the card's Approve button: ledger row
+    with the exact copy and file hash, a green card, a receipt. **No** approves nothing.
+  - Only the approver can answer, checked on the server, and only once. One open question per
+    version.
+  - Detection is a short-message rule (English, Hinglish, emoji) with no AI cost. "ok but…",
+    questions and reviewers' messages are ignored.
+- **FR-15 scope drift:** when a version reaches the client and the deliverable's revision rounds are
+  at or past the rounds included, the AM gets a **Scope** card in Internal.
+  - The card carries an AI-drafted client note, or a polite template if the AI is unavailable.
+  - The AM can edit it and **Send to client** (posted as the AM's own message) or **Discard**.
+  - One warning per round count.
+- **FR-17 nudges:** every morning (09:00 IST), for cards still unapproved and due today or tomorrow,
+  the bot reminds the approver by name in the client room. Once per version.
+- **FR-18 daily digest:** every morning, each internal room gets what moved in the last 24 h
+  (approvals, new versions, change lists, client messages), what's blocked (held for drift check,
+  unsettled conflicts) and who's waiting (client vs team). Skipped when there's nothing to say;
+  built from the data, with no AI cost.
+- **Scheduling:** Vercel Cron calls `/api/cron/daily`, protected by `CRON_SECRET` (already set in
+  Vercel production). Runs are recorded in `jobs`, so a repeat on the same day sends nothing
+  twice. `?project=` limits a run to one project, so tests never touch real rooms.
+- **Shared approval code:** approval logic moved into one function (`lib/deliverables/approve.ts`)
+  used by the card and the check.
+
+**Try it**
+1. As the approver, reply "ok" or 👍 in the client room under a card that's in review. A "Does
+   this approve all of v1?" card appears: tap **Yes**. The card turns green and the ledger has
+   the row. (Needs the Nexconn webhook configured.)
+2. Set **Rounds used → Change** to 1 on a project, then upload v2 with no confirmed changes. The
+   Internal room gets a Scope card: edit the note and **Send to client**.
+3. Give a deliverable a due date of tomorrow. The next morning's run (09:00 IST) nudges the
+   approver, and Internal gets the digest.
+
+**Checks:** lint, typecheck, 69 unit tests, E2E Round 6 (22 checks: approval check, scope, cron
+auth, nudge, digest, no repeats), Rounds 1, 2 and 5 again (67, 36, 28), and a browser check of the
+approval-check and scope cards and the digest/nudge messages.
+
+**Known issues**
+- Nudges use "unapproved and due soon", not Nexconn read receipts: there's no server-side
+  read-receipt API we could confirm in the docs.
+- The AI suites (Rounds 3, 4 and the Playwright demo) couldn't be re-run: the Gemini key's daily
+  quota is used up on all three models (429). The scope note used its template fallback in testing.
+- Vercel Hobby runs crons once a day; the 09:00 IST time can drift by up to an hour.
+
 ## Round 5 follow-up: change list speed (NFR-1) (2026-11-22)
 
 - **Hedged AI calls:** if the main model hasn't answered within 4 s, the backup starts in parallel,

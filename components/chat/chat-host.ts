@@ -3,6 +3,7 @@ import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
 import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
 import { CHANGELIST_TAG, CONFLICT_TAG, defineChangeListElement, defineConflictElement } from "./feedback-cards";
 import { defineDriftElement, DRIFT_TAG } from "./drift-card";
+import { APPROVAL_CHECK_TAG, defineApprovalCheckElement, defineScopeElement, SCOPE_TAG } from "./round6-cards";
 
 export const VOICE_MENU_ID = "drifty.voice";
 export const VOICE_EVENT = "drifty:voice";
@@ -229,6 +230,20 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       isCounted: true,
       digest: () => "[Drift check]",
       component: { tagName: DRIFT_TAG, elementClass: defineDriftElement() },
+    },
+    {
+      messageType: MSG.approvalCheck,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Please confirm]",
+      component: { tagName: APPROVAL_CHECK_TAG, elementClass: defineApprovalCheckElement() },
+    },
+    {
+      messageType: MSG.scope,
+      isPersisted: true,
+      isCounted: true,
+      digest: () => "[Scope]",
+      component: { tagName: SCOPE_TAG, elementClass: defineScopeElement() },
     },
     {
       messageType: MSG.receipt,
