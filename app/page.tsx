@@ -5,7 +5,7 @@ import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { SupportEmail } from "@/components/marketing/support";
 
 export const metadata: Metadata = {
-  title: "Drifty · Client feedback that doesn't drift",
+  title: "Drifty · Stop chasing client feedback on WhatsApp",
   description:
     "Chat-first client rooms for agencies. AI turns client messages and voice notes into a confirmed change list, catches versions that miss a change, and records every approval.",
 };
@@ -78,7 +78,7 @@ export default function Home() {
         {/* Hero */}
         <section className="mx-auto w-full max-w-5xl px-4 pt-14 pb-12 sm:pt-20">
           <p className="text-muted-foreground text-sm font-medium">For agencies and freelancers</p>
-          <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Client feedback that doesn&apos;t drift.</h1>
+          <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Stop chasing client feedback on WhatsApp.</h1>
           <p className="text-muted-foreground mt-4 max-w-2xl text-base leading-relaxed sm:text-lg">
             Drifty is the room where client feedback actually happens. AI turns messages and voice notes into a confirmed change list,
             catches versions that miss a change, and records every approval.
@@ -87,8 +87,8 @@ export default function Home() {
             <Link href="/login?mode=signup" className={buttonVariants({ size: "lg" })}>
               Start free
             </Link>
-            <Link href="#how" className={buttonVariants({ size: "lg", variant: "outline" })}>
-              See how it works
+            <Link href="/login?mode=signup&demo=1" className={buttonVariants({ size: "lg", variant: "outline" })}>
+              Try the live demo
             </Link>
           </div>
           <p className="text-muted-foreground mt-3 text-xs">Free for 2 active clients. Includes a demo project to try in 5 minutes.</p>
@@ -121,6 +121,13 @@ export default function Home() {
               </li>
             ))}
           </ol>
+          <p className="bg-beige-500 border-beige-400 mt-8 rounded-lg border px-4 py-3 text-sm">
+            <b className="text-dark-teal-500">Time saved, shown in your dashboard:</b>{" "}
+            <span className="text-air-force-blue-300">
+              Drifty estimates ~10 min saved per AI change list, ~15 min per conflict or missed change caught and ~5 min per approval
+              recorded, so you can see what it&apos;s worth on every project.
+            </span>
+          </p>
         </section>
 
         {/* Pricing */}

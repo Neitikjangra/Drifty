@@ -118,7 +118,8 @@ check("demo project is flagged and has an approver", demo?.is_demo === true && B
 const { data: demoD } = await admin.from("deliverables").select("id, current_version").eq("project_id", demoId);
 check("demo has a v1 deliverable", demoD?.length === 1 && demoD[0].current_version === 1);
 const { data: demoV } = await admin.from("versions").select("id, created_at, card_message_id").eq("deliverable_id", demoD?.[0]?.id).single();
-const { data: demoM } = await admin.from("messages").select("sent_at").eq("project_id", demoId);
+// Only the seeded client feedback (the webhook may also store the bot's welcome and cards).
+const { data: demoM } = await admin.from("messages").select("sent_at").eq("project_id", demoId).eq("kind", "text").neq("author_id", "driftybot");
 check("demo feedback (3 messages) all after v1", demoM?.length === 3 && demoM.every((m) => m.sent_at > demoV.created_at), JSON.stringify(demoM));
 check("demo v1 card posted", Boolean(demoV?.card_message_id));
 const again = await am.req("/api/demo", { method: "POST" });

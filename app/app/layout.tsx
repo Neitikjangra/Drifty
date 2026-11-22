@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getCaller } from "@/lib/access";
+import { Logo } from "@/components/brand/logo";
 
 export default function AppLayout({ children }: LayoutProps<"/app">) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4">
-          <Link href="/app" className="font-semibold tracking-tight">
-            Drifty
+          <Link href="/app" aria-label="Drifty projects">
+            <Logo />
           </Link>
           <Suspense fallback={null}>
             <AccountBar />

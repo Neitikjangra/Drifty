@@ -24,7 +24,7 @@ test("new agency completes the demo project", async ({ page, browser }) => {
 
   // Landing → sign up
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /doesn.t drift/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Stop chasing client feedback/i })).toBeVisible();
   await page.getByRole("link", { name: "Start free" }).first().click();
   await expect(page).toHaveURL(/\/login\?mode=signup/);
   await page.getByLabel("Email").fill(email);

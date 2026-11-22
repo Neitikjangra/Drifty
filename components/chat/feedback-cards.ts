@@ -38,11 +38,11 @@ input,textarea{box-sizing:border-box;width:100%;border:1px solid #aec3b0;border-
 `;
 
 export const STATUS_CHIP: Record<string, [string, string, string]> = {
-  suggested: ["Suggested", "#c9e197", "#384915"],
-  confirmed: ["Confirmed", "#cedbcf", "#1f2a20"],
+  suggested: ["Suggested", "#fef3c7", "#92400e"],
+  confirmed: ["Confirmed", "#dcfce7", "#166534"],
   rejected: ["Rejected", "#eff3ef", "#476874"],
   // Round 4 drift check verdicts
-  done: ["Done", "#cedbcf", "#1f2a20"],
+  done: ["Done", "#dcfce7", "#166534"],
   missing: ["Missing", "#fee2e2", "#991b1b"],
   reversed: ["Reversed", "#fee2e2", "#991b1b"],
   needs_check: ["Check by eye", "#dde7ea", "#24343a"],

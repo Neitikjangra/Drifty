@@ -37,9 +37,9 @@ const LABEL: Record<DeliverableRow["status"], string> = {
 };
 const TONE: Record<DeliverableRow["status"], string> = {
   draft: "bg-air-force-blue-900 text-air-force-blue-200",
-  in_review: "bg-beige-400 text-beige-100",
-  changes_requested: "bg-red-100 text-red-900",
-  approved: "bg-ash-grey-700 text-ash-grey-100",
+  in_review: "bg-amber-100 text-amber-900",
+  changes_requested: "bg-orange-100 text-orange-900",
+  approved: "bg-green-100 text-green-900",
 };
 
 /** Uploads straight to Supabase Storage through a one-time signed slot; returns the storage path. */

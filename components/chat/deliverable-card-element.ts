@@ -80,9 +80,9 @@ export function unwrap(value: unknown): SdkMessageLike | null {
 
 const CHIP: Record<CardStatus, { bg: string; fg: string }> = {
   draft: { bg: "#dde7ea", fg: "#24343a" },
-  in_review: { bg: "#c9e197", fg: "#384915" },
-  changes_requested: { bg: "#fee2e2", fg: "#991b1b" },
-  approved: { bg: "#cedbcf", fg: "#1f2a20" },
+  in_review: { bg: "#fef3c7", fg: "#92400e" },
+  changes_requested: { bg: "#ffedd5", fg: "#9a3412" },
+  approved: { bg: "#dcfce7", fg: "#166534" },
   superseded: { bg: "#eff3ef", fg: "#476874" },
 };
 
@@ -348,7 +348,7 @@ export function defineReceiptElement(): CustomElementConstructor {
       this._root.innerHTML = "";
       const style = document.createElement("style");
       style.textContent = `:host{display:block;max-width:300px;font-family:ui-sans-serif,system-ui,sans-serif}
-.r{border:1px solid #aec3b0;background:#eff3ef;border-radius:12px;padding:10px 12px;font-size:13px;color:#1f2a20;display:grid;gap:2px}
+.r{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:10px 12px;font-size:13px;color:#14532d;display:grid;gap:2px}
 .t{font-weight:600}.s{font-size:12px;color:#3e5441}`;
       const box = el("div", "r");
       if (parsed.success) {

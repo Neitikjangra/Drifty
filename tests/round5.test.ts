@@ -16,7 +16,7 @@ describe("plans", () => {
 describe("demo content", () => {
   it("has an approver and a reviewer who disagree, plus a copy change for the drift check", () => {
     expect(DEMO.people.map((p) => p.role).sort()).toEqual(["approver", "reviewer"]);
-    expect(DEMO.feedback.some((f) => /bigger/i.test(f.text))).toBe(true);
+    expect(DEMO.feedback.some((f) => /bada|bigger/i.test(f.text))).toBe(true); // Hinglish: "bada" = bigger
     expect(DEMO.feedback.some((f) => /smaller/i.test(f.text))).toBe(true);
     // v2 keeps the old CTA (so the drift check flags it); v3 fixes it.
     expect(DEMO.v2.copy).toContain("Buy now");

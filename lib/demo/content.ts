@@ -14,7 +14,8 @@ export const DEMO = {
     { key: "rahul", name: "Rahul (demo client)", role: "reviewer" as const, contact: "rahul@demo.drifty.app" },
   ],
   feedback: [
-    { from: "priya", text: "Looks lovely! Please make the logo bigger, it's hard to see on a phone." },
+    // Hinglish on purpose: the change list comes out in English ("Make the logo bigger").
+    { from: "priya", text: "Looks lovely! Logo thoda bada karo please, phone pe theek se dikh nahi raha." },
     { from: "rahul", text: "I'd like the logo smaller so the mithai is the hero of the post. Also change the button from 'Buy now' to 'Order now'." },
     { from: "priya", text: "Thanks team 🙏" },
   ],
