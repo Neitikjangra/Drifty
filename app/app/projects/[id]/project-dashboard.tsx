@@ -58,7 +58,10 @@ export function ProjectDashboard({ projectId, data, canManage }: { projectId: st
           </ul>
         </details>
       )}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Link href={`/app/projects/${projectId}/report`} className={buttonVariants({ size: "sm", variant: "outline" })}>
+          Monthly report →
+        </Link>
         <Link href={`/app/projects/${projectId}/ledger`} className={buttonVariants({ size: "sm", variant: "outline" })}>
           Approval ledger →
         </Link>

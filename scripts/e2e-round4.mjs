@@ -216,5 +216,18 @@ check("client can't change rounds", (await approver.req(`/api/projects/${project
 const rounds = await am.req(`/api/projects/${projectId}`, { method: "PATCH", body: { roundsIncluded: 3 } });
 check("AM sets rounds included", rounds.status === 200, `${rounds.status} ${rounds.text.slice(0, 80)}`);
 
+// Monthly client report
+const istNow = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 7);
+const rep = await am.req(`/app/projects/${projectId}/report?month=${istNow}`);
+const repText = rep.text.replace(/<!-- -->/g, "");
+check("monthly report renders with this month's approval", rep.status === 200 && repText.includes("Monthly client report") && repText.includes("Deliverables approved"), `${rep.status}`);
+const empty = await am.req(`/app/projects/${projectId}/report?month=2020-01`);
+check("empty month says nothing happened", empty.text.replace(/<!-- -->/g, "").includes("Nothing happened in this project"));
+const share = await am.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: istNow } });
+check("AM shares the report in the client room", share.status === 200, `${share.status} ${share.text.slice(0, 120)}`);
+check("client can't share the report", [403, 404].includes((await approver.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: istNow } })).status));
+check("anonymous can't share the report", (await stranger.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: istNow } })).status === 401);
+check("empty month can't be shared", (await am.req(`/api/projects/${projectId}/report/share`, { method: "POST", body: { month: "2020-01" } })).status === 409);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
