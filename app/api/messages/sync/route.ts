@@ -24,6 +24,22 @@ const body = z.object({
 });
 
 /**
+ * The Web SDK's content shapes differ from the webhook's wire format (installed
+ * @nexconn/chat types: TextMessageContent.text, ReferenceMessageContent.text + referMsg),
+ * so map them to what parseWebhookMessage reads ({content}, {content, referMsg: {content}}).
+ */
+function toWire(messageType: string, raw: unknown): Record<string, unknown> {
+  const c = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v : undefined);
+  if (messageType === "RC:TxtMsg") return { content: text(c.text) ?? text(c.content) ?? "" };
+  if (messageType === "RC:ReferenceMsg") {
+    const ref = (c.referMsg && typeof c.referMsg === "object" ? c.referMsg : {}) as Record<string, unknown>;
+    return { content: text(c.text) ?? text(c.content) ?? "", referMsg: { content: text(ref.text) ?? text(ref.content) ?? "" } };
+  }
+  return c; // voice: remoteUrl + duration already match
+}
+
+/**
  * POST /api/messages/sync: a safety net for the Nexconn webhook. Before Summarise, the agency's
  * browser reads the client room's recent history through the Chat SDK and sends it here; we
  * store anything the webhook didn't deliver (same parser, deduplicated on the Nexconn id).
@@ -47,7 +63,7 @@ export async function POST(req: Request) {
         userId: m.senderUserId,
         channelId: project.client_channel_id,
         messageType: m.messageType,
-        content: JSON.stringify(m.content ?? {}),
+        content: JSON.stringify(toWire(m.messageType, m.content)),
         channelType: 3,
         time: m.sentTime,
         messageId: m.messageId,

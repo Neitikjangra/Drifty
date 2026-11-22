@@ -205,14 +205,16 @@ const FEEDBACK_TYPES = new Set(["RC:TxtMsg", "RC:ReferenceMsg", "RC:HQVCMsg", "R
  * Safety net for the Nexconn webhook: read the client room's recent history through the chat
  * connection and let the server store anything it hasn't seen. Never blocks Summarise.
  */
-async function syncClientRoom(projectId: string, channelId: string | null) {
-  if (!channelId) return;
+async function syncClientRoom(projectId: string, channelId: string | null): Promise<number> {
+  if (!channelId) return 0;
   try {
     const { readRoomHistory } = await import("@/components/chat/chat-host");
     const history = (await readRoomHistory(channelId, 200)).filter((m) => FEEDBACK_TYPES.has(m.messageType) && m.senderUserId !== "driftybot");
-    if (history.length) await apiJson("/api/messages/sync", { body: { projectId, messages: history } });
+    if (!history.length) return 0;
+    const r = await apiJson<{ stored?: number }>("/api/messages/sync", { body: { projectId, messages: history } });
+    return r.stored ?? 0;
   } catch {
-    // The webhook path still works; Summarise goes ahead either way.
+    return 0; // The webhook path still works; Summarise goes ahead either way.
   }
 }
 
@@ -253,7 +255,7 @@ function DeliverableItem({
 
   async function summarise() {
     setSummary({ busy: true, text: "", error: false });
-    await syncClientRoom(projectId, clientChannelId);
+    const synced = await syncClientRoom(projectId, clientChannelId);
     try {
       const r = await apiJson<{ items: number; conflicts: number; conflictCheck?: string; messages: number }>(`/api/deliverables/${item.id}/summarise`);
       const failed = r.conflictCheck === "failed";
@@ -264,7 +266,8 @@ function DeliverableItem({
           `${r.items} change${r.items === 1 ? "" : "s"} suggested from ${r.messages} message${r.messages === 1 ? "" : "s"}` +
           (r.conflicts ? `, ${r.conflicts} conflict${r.conflicts > 1 ? "s" : ""} sent to the approver` : "") +
           `. See the Internal room.` +
-          (failed ? " The conflict check didn't run (AI busy): summarise again to check." : ""),
+          (failed ? " The conflict check didn't run (AI busy): summarise again to check." : "") +
+          (synced ? ` (${synced} new message${synced === 1 ? "" : "s"} picked up from the room.)` : ""),
       });
     } catch (err) {
       setSummary({ busy: false, error: true, text: err instanceof Error ? err.message : "Couldn't summarise, try again." });

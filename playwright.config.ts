@@ -11,6 +11,7 @@ export default defineConfig({
   timeout: 8 * 60_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
+  workers: 1, // tests share test agencies (history-sync uses the newest demo agency)
   retries: 0,
   reporter: [["list"]],
   use: {
