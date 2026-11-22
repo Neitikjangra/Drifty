@@ -71,6 +71,7 @@ export function isOverload(err: unknown): boolean {
  */
 const busyUntil = new Map<string, number>();
 const BUSY_FOR_MS = 60_000;
+const QUOTA_SKIP_MS = 10 * 60_000;
 const HEDGE_MS = 4_000;
 
 async function onAvailableModel<T>(
@@ -85,7 +86,8 @@ async function onAvailableModel<T>(
     hedgeMs,
     onFail: (m, err) => {
       if (signalAborted(err)) return;
-      if (isOverload(err)) busyUntil.set(m, Date.now() + BUSY_FOR_MS);
+      // A used-up daily quota won't come back in a minute: skip that model for longer.
+      if (isOverload(err)) busyUntil.set(m, Date.now() + (isQuota(err) ? QUOTA_SKIP_MS : BUSY_FOR_MS));
       const e = err as { status?: number; name?: string };
       console.warn(`[ai] ${task} model=${m} ${isOverload(err) ? "busy" : "failed"} (${e?.status ?? e?.name ?? "?"})`);
     },
