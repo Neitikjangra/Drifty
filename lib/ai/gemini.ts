@@ -1,6 +1,7 @@
 import "server-only";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { z } from "zod";
+import { hedged } from "./hedge";
 
 /**
  * Gemini 3.8 Flash (gemini-3.8-flash) for AI-1..AI-3 and voice transcription.
@@ -64,31 +65,37 @@ export function isOverload(err: unknown): boolean {
 }
 
 /**
- * One try on the main model; if it's busy, the fallback (when AI_FALLBACK_MODEL is set).
- * Overloaded calls can take ~20 s to fail, so retrying the same model would blow the 15 s target.
+ * Main model first; if it hasn't answered within HEDGE_MS (or fails), the next model starts in
+ * parallel and the first answer wins (lib/ai/hedge.ts). A model that was busy in the last minute
+ * goes to the back of the line (circuit breaker), unless it's the only one.
  */
 const busyUntil = new Map<string, number>();
 const BUSY_FOR_MS = 60_000;
+const HEDGE_MS = 4_000;
 
-/** `hasFallback`: shorter timeout for a model that has a fallback after it, so a busy main model fails fast. */
-async function onAvailableModel<T>(task: string, call: (model: string, hasFallback: boolean) => Promise<T>): Promise<T> {
-  let last: unknown;
+async function onAvailableModel<T>(
+  task: string,
+  call: (model: string, hasFallback: boolean, signal: AbortSignal) => Promise<T>,
+  hedgeMs = HEDGE_MS,
+): Promise<T> {
   const list = models();
-  for (const [i, model] of list.entries()) {
-    // Circuit breaker: skip a model that was busy in the last minute (if there's another to try).
-    if (i < list.length - 1 && (busyUntil.get(model) ?? 0) > Date.now()) continue;
-    try {
-      const out = await call(model, i < list.length - 1);
-      busyUntil.delete(model);
-      return out;
-    } catch (err) {
-      last = err;
-      if (!isOverload(err)) throw err;
-      busyUntil.set(model, Date.now() + BUSY_FOR_MS);
-      console.warn(`[ai] ${task} model=${model} busy`);
-    }
-  }
-  throw last instanceof Error ? last : new AiError("AI is busy right now.");
+  const now = Date.now();
+  const ordered = [...list.filter((m) => (busyUntil.get(m) ?? 0) <= now), ...list.filter((m) => (busyUntil.get(m) ?? 0) > now)];
+  const { value, model } = await hedged(ordered, (m, i, signal) => call(m, i < ordered.length - 1, signal), {
+    hedgeMs,
+    onFail: (m, err) => {
+      if (signalAborted(err)) return;
+      if (isOverload(err)) busyUntil.set(m, Date.now() + BUSY_FOR_MS);
+      const e = err as { status?: number; name?: string };
+      console.warn(`[ai] ${task} model=${m} ${isOverload(err) ? "busy" : "failed"} (${e?.status ?? e?.name ?? "?"})`);
+    },
+  });
+  busyUntil.delete(model);
+  return value;
+}
+
+function signalAborted(err: unknown) {
+  return (err as { name?: string })?.name === "AbortError" && /abort/i.test(String((err as Error)?.message ?? ""));
 }
 
 /** Structured call: returns parsed+validated JSON or throws AiError after one retry. */
@@ -122,11 +129,12 @@ export async function generateJson<S extends z.ZodType>(opts: {
   let lastStatus = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const res = await onAvailableModel(opts.task, (model, hasFallback) =>
+      const res = await onAvailableModel(opts.task, (model, hasFallback, signal) =>
         ai(hasFallback ? t.first : t.last).models.generateContent({
           model,
           contents,
           config: {
+            abortSignal: signal,
             systemInstruction: opts.system,
             responseMimeType: "application/json",
             responseJsonSchema: opts.jsonSchema,
@@ -161,7 +169,7 @@ export async function generateJson<S extends z.ZodType>(opts: {
 /** Voice note → text (FR-7). Returns "" for silence. */
 export async function transcribeAudio(audio: Uint8Array, mimeType: string): Promise<string> {
   const started = Date.now();
-  const res = await onAvailableModel("transcribe", (model, hasFallback) =>
+  const res = await onAvailableModel("transcribe", (model, hasFallback, signal) =>
     ai(hasFallback ? 20_000 : 45_000).models.generateContent({
       model,
       contents: [
@@ -175,8 +183,9 @@ export async function transcribeAudio(audio: Uint8Array, mimeType: string): Prom
           ],
         },
       ],
-      config: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
+      config: { abortSignal: signal, thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
     }),
+    15_000, // background job: don't pay for two audio calls unless the first is really stuck
   );
   console.info(`[ai] transcribe ok ms=${Date.now() - started}`);
   return (res.text ?? "").trim().slice(0, 5000);

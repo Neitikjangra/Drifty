@@ -37,23 +37,28 @@ const AI_BUDGET_MS = 50_000;
 
 export async function summarise(project: Project, d: Deliverable, createdBy: string) {
   const started = Date.now();
-  const v = await getVersionByNumber(d.id, d.current_version);
-  if (!v) throw new SummariseError("This deliverable has no version yet.");
   if (!project.client_channel_id || !project.internal_channel_id) throw new SummariseError("This project's rooms aren't ready.");
+  const clientChannel = project.client_channel_id;
+  // Independent lookups run in parallel: every database round trip counts towards NFR-1 (15 s).
+  const [v, guests] = await Promise.all([getVersionByNumber(d.id, d.current_version), listGuests(project.id), ensureBot()]);
+  if (!v) throw new SummariseError("This deliverable has no version yet.");
 
   // Who's who: only client people's messages are feedback.
-  const guests = await listGuests(project.id);
-  const profiles = guests.length
-    ? (check(
-        "profiles",
-        await supabaseAdmin().from("profiles").select("user_id, nexconn_user_id, display_name").in("user_id", guests.map((g) => g.user_id)),
-      ) as { user_id: string; nexconn_user_id: string; display_name: string }[])
-    : [];
+  const [profiles, allSince] = await Promise.all([
+    guests.length
+      ? supabaseAdmin()
+          .from("profiles")
+          .select("user_id, nexconn_user_id, display_name")
+          .in("user_id", guests.map((g) => g.user_id))
+          .then((r) => check("profiles", r) as { user_id: string; nexconn_user_id: string; display_name: string }[])
+      : Promise.resolve([]),
+    feedbackSince(clientChannel, v.created_at),
+  ]);
   const byNexconn = new Map(
     profiles.map((p) => [p.nexconn_user_id, { name: p.display_name, role: guests.find((g) => g.user_id === p.user_id)?.role ?? "reviewer" }]),
   );
 
-  const stored = (await feedbackSince(project.client_channel_id, v.created_at)).filter((m) => byNexconn.has(m.author_id));
+  const stored = allSince.filter((m) => byNexconn.has(m.author_id));
 
   // Voice notes that weren't transcribed yet (e.g. a webhook arrived just now): try once now.
   for (const m of stored) {
@@ -91,6 +96,8 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     thinking: "low",
     timeouts: { first: 10_000, last: 38_000 },
   });
+  const tLoaded = started; // (load time is included in the ai1 mark below)
+  const tAi1 = Date.now();
   const items = sanitizeItems(ai1, messages);
   if (items.length === 0) throw new SummariseError("The AI didn't find any change requests in the client's messages.");
 
@@ -121,6 +128,7 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     }
   }
 
+  const tAi = Date.now();
   // Store
   const db = supabaseAdmin();
   const list = check(
@@ -148,8 +156,8 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
       .select("id"),
   ) as { id: string }[];
 
-  // Post the change list card (internal room)
-  await ensureBot();
+  const tStored = Date.now();
+  // Post the change list card (internal room) and the conflict cards (client room) in parallel.
   const msgText = new Map(messages.map((m) => [m.id, m.text]));
   const card: ChangeListCard = {
     changeListId: list.id,
@@ -167,26 +175,28 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
       status: "suggested",
     })),
   };
-  const cardId = await sendGroupMessage({
-    fromUserId: BOT_USER_ID,
-    channelId: project.internal_channel_id,
-    messageType: MSG.changelist,
-    content: card as unknown as Record<string, unknown>,
-    pushContent: `Change list for ${d.title} v${v.number}: ${items.length} item(s)`,
-    metadata: Object.fromEntries(items.map((_, i) => [itemKey(i), JSON.stringify({ s: "suggested" })])),
-  });
-  check("setChangeListCard", await db.from("change_lists").update({ card_message_id: cardId }).eq("id", list.id));
-  if (conflictCheck === "failed") {
-    await sendGroupMessage({
+  const internal = project.internal_channel_id;
+  const postList = async () => {
+    const cardId = await sendGroupMessage({
       fromUserId: BOT_USER_ID,
-      channelId: project.internal_channel_id,
-      messageType: "RC:TxtMsg",
-      content: { content: `I couldn't check this change list for conflicting requests (the AI was busy). Review it for contradictions, or press Summarise feedback again.` },
+      channelId: internal,
+      messageType: MSG.changelist,
+      content: card as unknown as Record<string, unknown>,
+      pushContent: `Change list for ${d.title} v${v.number}: ${items.length} item(s)`,
+      metadata: Object.fromEntries(items.map((_, i) => [itemKey(i), JSON.stringify({ s: "suggested" })])),
     });
-  }
-
+    check("setChangeListCard", await db.from("change_lists").update({ card_message_id: cardId }).eq("id", list.id));
+    if (conflictCheck === "failed") {
+      await sendGroupMessage({
+        fromUserId: BOT_USER_ID,
+        channelId: internal,
+        messageType: "RC:TxtMsg",
+        content: { content: `I couldn't check this change list for conflicting requests (the AI was busy). Review it for contradictions, or press Summarise feedback again.` },
+      });
+    }
+  };
   // FR-12: conflict cards (client room), approver decides
-  for (const c of conflicts) {
+  const postConflict = async (c: (typeof conflicts)[number]) => {
     const a = items[c.item_a];
     const b = items[c.item_b];
     const alert = check(
@@ -213,14 +223,19 @@ export async function summarise(project: Project, d: Deliverable, createdBy: str
     };
     const conflictMsg = await sendGroupMessage({
       fromUserId: BOT_USER_ID,
-      channelId: project.client_channel_id,
+      channelId: clientChannel,
       messageType: MSG.conflict,
       content: conflictCard as unknown as Record<string, unknown>,
       pushContent: `Drifty AI: two requests on ${d.title} conflict. The approver can choose.`,
       metadata: { status: "open" },
     });
     check("setConflictCard", await db.from("drift_alerts").update({ card_message_id: conflictMsg }).eq("id", alert.id));
-  }
+  };
+  await Promise.all([postList(), ...conflicts.map(postConflict)]);
+  // Timings only (no content): where the 15 s budget goes.
+  console.info(
+    `[summarise] ms total=${Date.now() - started} load+ai1=${tAi1 - tLoaded} ai2=${tAi - tAi1} store=${tStored - tAi} post=${Date.now() - tStored} msgs=${messages.length}`,
+  );
 
   return { changeListId: list.id, items: items.length, conflicts: conflicts.length, conflictCheck, messages: messages.length };
 }

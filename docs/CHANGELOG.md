@@ -1,5 +1,19 @@
 # Changelog
 
+## Round 5 follow-up: change list speed (NFR-1) (2026-11-22)
+
+- **Hedged AI calls:** if the main model hasn't answered within 4 s, the backup starts in parallel,
+  the first answer wins and the other is cancelled. Before, a busy main model cost its full 10 s
+  minimum deadline before the backup even started (Round 3 measured 16.0 s). Voice transcription
+  hedges at 15 s, since it runs in the background.
+- **Summarise round trips in parallel:** version, guests and the bot are looked up together;
+  profiles and messages together; the change list card and conflict cards are posted together.
+- Each model failure now logs its status code, and Summarise logs time per step (no content).
+- **Measured:** 12.0–14.2 s for the change list with hedging (target 15 s). The parallel posting
+  isn't measured end to end yet: the Gemini key's daily quota ran out on all three models
+  (429) during testing, so the AI suites can't run until it resets or the quota is raised.
+  E2E Rounds 1, 2 and 5 pass (67, 36, 28) and there are 61 unit tests, including new hedge tests.
+
 ## Round 5: production hardening and launch surface (2026-11-22)
 
 **Built**
