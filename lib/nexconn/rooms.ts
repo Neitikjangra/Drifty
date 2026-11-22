@@ -46,7 +46,7 @@ export async function createProjectRooms(input: {
   await createGroupChannel(ids.internal, `${input.clientName} · internal`, BOT_USER_ID, input.internalRoomMembers);
   await botSays(
     ids.client,
-    `Welcome to the ${input.clientName} room. Share feedback here as text or voice notes; drafts will appear as cards you can approve.`,
+    `Welcome to the ${input.clientName} room. Share feedback here as text or voice notes, in English, Hindi or Hinglish; drafts will appear as cards you can approve.`,
   );
   await botSays(
     ids.internal,

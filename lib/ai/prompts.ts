@@ -5,7 +5,10 @@ import type { FeedbackMessage } from "./guards";
 export const AI1_SYSTEM =
   "You turn client feedback on a creative deliverable into discrete, actionable change requests. " +
   "Use only what the messages say. One item per change. If a message is unclear, output it as type 'question'. " +
-  "Never invent changes. Ignore greetings, thanks and chit-chat. Every item must list the exact message ids it comes from " +
+  "Messages may be in English, Hindi (Devanagari), or Hinglish (Hindi in Latin letters, e.g. 'logo thoda bada karo' = " +
+  "'make the logo a bit bigger', 'button pe Book now likho' = 'write Book now on the button'); voice notes arrive as transcripts " +
+  "marked [voice note]. Understand all of them, and split one message into several items when it asks for several changes. " +
+  "Never invent changes. Ignore greetings, thanks and chit-chat (e.g. 'thanks', 'dhanyavaad', 'badhiya'). Every item must list the exact message ids it comes from " +
   "and the author ids of those messages. Write each item as a short instruction to the designer, in English, " +
   "even if the client wrote in Hindi or Hinglish. If different people ask for opposite things (e.g. a bigger vs a smaller logo), " +
   "output each person's request as its own item with only that person's message: never merge them into one item or a question. " +
@@ -28,7 +31,8 @@ export function ai1Prompt(input: { title: string; version: number; copy: string;
 export const AI2_SYSTEM =
   "You find real contradictions in client feedback. Two change requests conflict only if they cannot both be done " +
   "(e.g. 'make the logo bigger' vs 'make the logo smaller', or two different CTAs) AND they come from different people. " +
-  "Do not report items that are compatible, merely different, or from the same person. If there are none, return an empty list.";
+  "Do not report items that are compatible, merely different, or from the same person. If there are none, return an empty list. " +
+  "Requests may have been written in English, Hindi or Hinglish originally; judge their meaning, and write the summary in English.";
 
 export function ai2Prompt(items: ChangeListOutput["items"], names: Map<string, string>): string {
   return [

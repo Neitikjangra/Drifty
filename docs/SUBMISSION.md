@@ -1,93 +1,118 @@
 # Drifty: submission write-up
 
-Source for the PDF write-up (PRD section 8). Sections marked **(fill in)** need numbers or links
-only the team has.
+> **Indian agencies run client approvals on WhatsApp. Drifty is a Nexconn-powered chat room where
+> clients talk naturally (even Hinglish voice notes); AI turns it into a change list, catches
+> conflicting feedback and missed changes, and records a dispute-proof approval.**
 
-- **Live app:** https://drifty-six.vercel.app
-- **GitHub:** https://github.com/Neitikjangra/drifty
-- **Demo video:** (fill in)
-- **Nexconn App Key:** (fill in from the Nexconn Console; it's the public client key, not the App Secret)
+| | |
+| --- | --- |
+| Live app | https://drifty-six.vercel.app |
+| GitHub | https://github.com/Neitikjangra/drifty |
+| Demo video | _(fill in)_ |
+| Nexconn App Key | _(fill in from the Nexconn Console; the public client key, not the App Secret)_ |
+| Try-it QR | _(QR code for the live URL)_ |
 
 ## 1. Problem and evidence
 
-Agencies run client feedback through WhatsApp threads, screenshots and voice notes. Revision
-rounds before approval rose from three to five (IPA / BetterBriefs, via Marketing Week), and only a
-third of agencies say they get constructive feedback. The expensive failures are the same every
-time: a request gets lost in the thread, two client people ask for opposite things, the next
-version quietly misses a change, and "I never approved that" (SRS section 1).
+Feedback on creative work arrives scattered across WhatsApp threads, screenshots and voice notes.
+The costly failures repeat: a request gets lost, two client people ask for opposite things, the next
+version quietly misses a change, and later "I never approved that". (Sources: docs/SRS.md section 2.)
 
-## 2. What Drifty does: the drifts it tracks
+- Revision rounds before approval rose from three (2007) to five, and only a third of agencies say
+  they get constructive feedback ([Marketing Week, on the IPA / BetterBriefs study](https://www.marketingweek.com/constructive-feedback-ipa/)).
+- AI that consolidates feedback is sold today as 3–5-week custom builds ([Enterprise DNA](https://enterprisedna.co/resources/guides/agencies-automate-client-revision-tracking)):
+  demand is real, with no simple product for small agencies.
+- India has 11,000+ digital marketing companies ([Clutch](https://clutch.co/in/agencies/digital-marketing?page=145)) on ₹20k–80k monthly retainers
+  ([MarketingMonk](https://www.marketingmonk.so/agency-directory/agency/vdoitech-smm-agency-india)), so Drifty is priced per agency, not per client.
 
-| Drift | What Drifty does |
+## 2. Features _(screenshot placeholders)_
+
+1. **Client rooms, no install:** a personal 30-day link opens the room on the client's phone. _[screenshot: client room on a phone]_
+2. **Deliverable cards:** the approver taps Approve or Request changes, and the status updates live for everyone. _[screenshot]_
+3. **Voice notes in Hindi, English or Hinglish:** recorded in the room, transcribed by Gemini as spoken. _[screenshot]_
+4. **AI change list:** one tap turns the client's messages into clear English items, each with the client's own quote ("logo thoda bada karo" → "Increase the logo size"). The AM confirms, edits or rejects each one. _[screenshot]_
+5. **Conflict card:** when two client people disagree (logo bigger vs smaller), the approver chooses. _[screenshot]_
+6. **Drift check:** a new version is held back from the client until AI-3 checks it. Missing or reversed changes are flagged, and the AM sends it or sends it back. _[screenshot]_
+7. **Dispute-proof ledger:** every approval stores the exact copy and the file's SHA-256, insert-only, with CSV export. _[screenshot]_
+8. **Dashboard, scope warnings, nudges, daily digest:** what's waiting on whom, rounds used against included, reminders before due dates. _[screenshot]_
+9. **Demo project and plans:** a seeded demo with a step-by-step guide; Free for 2 active clients.
+
+## 3. Nexconn SDK usage
+
+| Nexconn capability | How Drifty uses it |
 | --- | --- |
-| **Feedback drift**: requests scattered across messages and voice notes, or contradicting each other | *Summarise feedback* turns the client room into a change list (AI-1). Every item links to its source message, and the AM confirms, edits or rejects each one. Conflicts between two client people go to the approver as a card (AI-2). |
-| **Version drift**: a new version misses or reverses a confirmed change | The new version is **held** from the client while AI-3 checks the copy word for word and compares the images. The AM sends it to the client or back to the creative. |
-| **Approval drift**: unclear sign-off | Only the named approver can approve, checked on the server. Every approval lands in an insert-only ledger with the exact copy and the file's SHA-256, exportable as CSV. |
+| **Group channels** | Two per project, created server-side (Platform Chat API): a client room, plus an internal room clients are never added to. |
+| **ChatUI Web** (`@nexconn/chatui`) | Every room UI. Layout and feature switches configured; voice-note button added to the input toolbar. |
+| **Custom messages** | Seven card types: `drifty:deliverable`, `drifty:changelist`, `drifty:conflict`, `drifty:drift`, `drifty:receipt`, `drifty:approvalcheck`, `drifty:scope`. |
+| **Message extensions (metadata)** | Live status on cards (Approved / Superseded, each item's status, conflict choice, drift decision), written only by the server and pushed to every viewer. |
+| **Voice messages** | HD voice (`RC:HQVCMsg`) sent from our recorder (ChatUI Web has none), played through an access-checked URL. |
+| **Webhooks** (`message:send`) | Signature-verified, replay-protected, deduplicated message store. A Chat SDK **history** sync covers anything the webhook misses. |
+| **Server bot sends** | Drifty AI posts cards, briefs, conflict questions, nudges and digests. |
+| **Access tokens** | Issued per user server-side; reconnect and token refresh handled by a connection keeper. |
+| **Reactions** | ChatUI message reactions enabled. |
 
-Scope drift and approval-drift nudges (FR-15/16) are Round 6 "Should" items.
+**Usage so far** (from our database; counts only):
 
-## 3. Features that use the Nexconn SDK
-
-- **Group channels:** each project gets a client room and an internal room, created server-side
-  over the Platform Chat API. Clients only ever join the client room.
-- **ChatUI Web** (`@nexconn/chatui` 26.5.0) renders every room. There is no custom chat UI.
-- **Custom messages** rendered by our own custom elements, registered via `registerCustomMessages`:
-  `drifty:deliverable`, `drifty:changelist`, `drifty:conflict`, `drifty:drift`, `drifty:receipt`.
-- **Message metadata (extensions):** card status (Approved, Superseded, each item's status, the
-  conflict choice, the drift decision) is written by the server and updates live for everyone
-  through `onMessageMetadataUpdated`.
-- **Voice messages:** HD voice (`RC:HQVCMsg`) sent from our recorder, which we built because ChatUI
-  Web has none. Played back through an access-checked URL and transcribed by Gemini.
-- **Server sends as the Drifty AI bot:** cards, briefs, conflict notes.
-- **Webhooks** (`message:send`): every room message reaches our backend. Signature and App Key are
-  checked, stale timestamps rejected, and duplicates dropped.
-- **Access tokens** issued server-side per user, with a connection keeper (reconnect, token refresh).
+| | All, including test runs | Excluding test data |
+| --- | --- | --- |
+| Workspaces | 46 | 4 |
+| Projects | 99 | 4 |
+| Nexconn group channels | 198 | 8 |
+| Nexconn users (profiles) | 197 | _(fill in)_ |
+| Messages stored | 212 | 7 |
+| AI change lists | 36 | |
+| Drift / conflict / scope alerts | 67 | |
+| Approvals recorded | 26 | |
 
 ## 4. Architecture and AI design
 
+```mermaid
+flowchart LR
+  Phone[Client phone / Agency browser] -- ChatUI Web --> NX[(Nexconn: group channels, messages, metadata)]
+  Phone -- HTTPS --> App[Next.js 16 on Vercel]
+  App -- Platform Chat API: channels, bot sends, metadata --> NX
+  NX -- webhook message:send --> App
+  App -- RLS + service role --> DB[(Supabase Postgres + private storage)]
+  App -- AI-1/2/3, voice --> AI[Gemini API + backup models]
 ```
-Phone / browser ── Next.js 16 (Vercel) ── Supabase (Postgres + RLS, private storage)
-     │  ChatUI Web           │  route handlers: every permission re-checked
-     └──── Nexconn ◄─────────┤  Platform Chat API (channels, bot sends, metadata)
-           (Singapore)       │  ◄── webhook (message:send)
-                             └── Gemini API (AI-1 change list, AI-2 conflicts, AI-3 drift, voice)
-```
 
-AI rules, all enforced in code:
+**AI design:**
+- **AI-1** turns English, Hindi and Hinglish messages and voice transcripts into English change items.
+- **AI-2** finds conflicts between different people.
+- **AI-3** checks a new version against the confirmed changes.
+- All three use JSON-schema output, validated and retried once.
 
-- AI runs only on a button press or a new version, never on every message. Input is capped at
-  the last 200 messages.
-- Output must match a JSON schema (validated with Zod, retried once).
-- Items without a real source message are dropped.
-- Low-confidence items become questions.
-- The AI never approves and never confirms. It messages clients only to ask the approver about a
-  conflict.
-- If the AI is unavailable, the team is told: "Couldn't summarise", "The conflict check didn't
-  run", or drift items become "Check by eye". Nothing reaches the client unchecked.
+**Human-approval rules (enforced in code):**
+- AI runs only on a button press or a new version, never on every message.
+- Every item needs a real source message; low-confidence items become questions.
+- The AI never approves, never confirms and never messages clients, except to ask the approver about a conflict or check a vague "ok".
+- Approvals are insert-only.
+- When the AI is busy, people are told and nothing reaches the client unchecked.
 
-## 5. Traction **(fill in)**
+## 5. Traction _(fill in)_
 
-- Pilot agencies:
-- Client people invited / rooms active:
-- Messages and voice notes through Nexconn:
-- Quotes:
+- Pilot agencies: __ · Client people invited: __ · Messages and voice notes: __
+- Quotes: "…"
+- _[Nexconn Console screenshots: active users, messages]_
 
 ## 6. Business model and roadmap
 
-- **Free:** 2 active clients, so a freelancer can run real work.
-- **Pilot:** more clients, onboarding help, priced per agency (not per client; Indian retainers
-  can't carry $33–49 per client).
-- **Next:** scope-drift warnings when rounds run out (FR-15), approval-drift checks for a vague
-  "ok 👍" (FR-16), nudges and a daily digest (FR-17/18), WhatsApp hand-off links.
+- **Free:** 2 active clients. **Pilot:** more clients, onboarding help. Priced per agency.
+- **Roadmap:**
+  - own domain and transactional email
+  - Razorpay subscriptions
+  - WhatsApp notifications
+  - pin comments on images
+  - import from Drive, Figma and Canva
+  - multi-step approvals
+  - PWA with push
+  - monthly client report
 
-## 7. Production readiness (PRD section 7)
+## 7. Production readiness
 
-- **Secrets:** server-only. `.env.local` is git-ignored.
-- **Access:** RLS on every table. Server checks on every route. Approver-only actions verified.
-  Clients never join internal rooms.
-- **Ledger:** insert-only (privileges revoked plus a trigger).
-- **Rate limits:** auth, join, upload, AI and write routes, per user and per IP (shared in Postgres).
-- **Monitoring:** Sentry via `SENTRY_DSN` (error class and stack only, no message text). Background
-  jobs retry 3 times and are recorded in `jobs`. Health check at `/api/health`.
-- **Tests:** 69 unit tests, 6 end-to-end suites (225 checks, all passing) and a Playwright demo-path test on a
-  phone-sized screen.
+- Server-only secrets.
+- RLS on every table, plus server checks on every route.
+- Rate limits.
+- Sentry hooks.
+- Jobs with retries.
+- **Tests:** 69 unit tests, six end-to-end suites (200+ checks) and Playwright tests for the demo path, the chat layout (desktop and 375 px) and the webhook-miss sync.

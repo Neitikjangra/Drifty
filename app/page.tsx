@@ -92,6 +92,9 @@ export default function Home() {
             </Link>
           </div>
           <p className="text-muted-foreground mt-3 text-xs">Free for 2 active clients. Includes a demo project to try in 5 minutes.</p>
+          <p className="bg-secondary text-dark-teal-500 mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
+            🇮🇳 Understands Hindi &amp; Hinglish: “logo thoda bada karo” becomes “Increase the logo size”
+          </p>
         </section>
 
         {/* The drifts */}

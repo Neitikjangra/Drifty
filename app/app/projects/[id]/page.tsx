@@ -15,6 +15,8 @@ import { canUploadVersions } from "@/lib/auth/permissions";
 import { latestVersionAlerts, type VersionAlert } from "@/lib/drift/check";
 import { loadDashboard } from "@/lib/dashboard/load";
 import { ProjectDashboard } from "./project-dashboard";
+import { TimeSavedCard } from "@/components/time-saved-card";
+import { loadTimeSaved } from "@/lib/dashboard/time-saved-load";
 import { InternalSummariseBar } from "@/components/chat/internal-summarise";
 import { DemoGuide } from "./demo-guide";
 import { demoProgress } from "@/lib/demo/progress";
@@ -166,13 +168,15 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
 
 async function TopPanels({ project, canManage }: { project: Project; canManage: boolean }) {
   const deliverables = await getDeliverables(project.id);
-  const [dashboard, demo] = await Promise.all([
+  const [dashboard, demo, saved] = await Promise.all([
     loadDashboard(deliverables, project.rounds_included),
     project.is_demo && canManage ? demoProgress(project.id) : Promise.resolve(null),
+    loadTimeSaved(deliverables.map((d) => d.id)),
   ]);
   return (
     <>
       {demo && <DemoGuide projectId={project.id} progress={demo} />}
+      <TimeSavedCard data={saved} scope="project" />
       <ProjectDashboard projectId={project.id} data={dashboard} canManage={canManage} />
     </>
   );
@@ -204,7 +208,7 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
   return (
     <>
       <DeliverablesPanel projectId={project.id} clientChannelId={project.client_channel_id} canCreate={canManage} canUpload={canUpload} hasApprover={Boolean(project.approver_id)} items={deliverableRows} />
-      <PeoplePanel projectId={project.id} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
+      <PeoplePanel projectId={project.id} projectName={project.client_name} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
     </>
   );
 }

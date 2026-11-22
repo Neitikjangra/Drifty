@@ -14,6 +14,9 @@ export interface PeopleData {
   past: { inviteId: string; name: string; status: "cancelled" | "expired" }[];
 }
 
+/** WhatsApp green, readable white text (contrast ~4.6:1 with the darker shade). */
+const WA_CLASS = "bg-[#1f9d55] text-white hover:bg-[#178a49]";
+
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
 async function copyText(text: string) {
@@ -25,7 +28,7 @@ async function copyText(text: string) {
   }
 }
 
-export function PeoplePanel(props: { projectId: string; canManage: boolean; approverId: string | null } & PeopleData) {
+export function PeoplePanel(props: { projectId: string; projectName: string; canManage: boolean; approverId: string | null } & PeopleData) {
   const router = useRouter();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -47,6 +50,28 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
 
   async function showLink(key: string, link: string) {
     setShown({ key, link, copied: await copyText(link) });
+  }
+
+  /**
+   * Share the person's link on WhatsApp (wa.me opens the app on phones, WhatsApp Web on desktop).
+   * The tab opens on the tap itself so pop-up blockers allow it, then goes to wa.me.
+   */
+  async function shareWhatsApp(inviteId: string, name: string) {
+    const win = window.open("", "_blank");
+    setBusyKey(`wa-${inviteId}`);
+    setError("");
+    try {
+      const { link } = await apiJson<{ link: string }>(`/api/invites/${inviteId}/link`, { method: "GET" });
+      const text = `Hi ${name}, please review ${props.projectName} on Drifty: ${link}`;
+      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      win?.close();
+      setError(err instanceof Error ? err.message : "Couldn't get the link. Try Copy link again.");
+    } finally {
+      setBusyKey(null);
+    }
   }
 
   const copyAgain = (inviteId: string) =>
@@ -116,6 +141,11 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
                         {busyKey === `copy-${m.inviteId}` ? "Copying…" : "Copy link again"}
                       </Button>
                     )}
+                    {m.inviteId && m.linkActive && (
+                      <Button size="sm" className={WA_CLASS} disabled={busy} onClick={() => void shareWhatsApp(m.inviteId!, m.name)}>
+                        {busyKey === `wa-${m.inviteId}` ? "Opening…" : "Share on WhatsApp"}
+                      </Button>
+                    )}
                     {m.inviteId && !m.linkActive && (
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => newLink(m.inviteId!)}>
                         {busyKey === `new-${m.inviteId}` ? "Creating…" : "New link"}
@@ -165,6 +195,9 @@ export function PeoplePanel(props: { projectId: string; canManage: boolean; appr
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => copyAgain(i.inviteId)}>
                     {busyKey === `copy-${i.inviteId}` ? "Copying…" : "Copy link again"}
+                  </Button>
+                  <Button size="sm" className={WA_CLASS} disabled={busy} onClick={() => void shareWhatsApp(i.inviteId, i.name)}>
+                    {busyKey === `wa-${i.inviteId}` ? "Opening…" : "Share on WhatsApp"}
                   </Button>
                   <Button size="sm" variant="ghost" disabled={busy} onClick={() => revoke(i.inviteId, false)}>
                     {busyKey === `revoke-${i.inviteId}` ? "Cancelling…" : "Cancel"}

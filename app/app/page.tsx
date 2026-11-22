@@ -8,6 +8,8 @@ import { canManageProjects } from "@/lib/auth/permissions";
 import { listArchivedProjects, listProjects } from "@/lib/db/repo";
 import { clientLimit } from "@/lib/plans";
 import { AddDemoButton } from "./add-demo-button";
+import { TimeSavedCard } from "@/components/time-saved-card";
+import { loadWorkspaceTimeSaved } from "@/lib/dashboard/time-saved-load";
 import { ArchiveButton } from "./archive-button";
 import { NewProjectForm } from "./new-project-form";
 
@@ -27,7 +29,7 @@ async function Projects() {
   if (!caller.membership) redirect("/app/onboarding");
 
   const ws = caller.membership.workspace;
-  const [projects, archived] = await Promise.all([listProjects(ws.id), listArchivedProjects(ws.id)]);
+  const [projects, archived, saved] = await Promise.all([listProjects(ws.id), listArchivedProjects(ws.id), loadWorkspaceTimeSaved(ws.id)]);
   const canCreate = canManageProjects(caller.membership.role);
   const limit = clientLimit(ws.plan);
   const activeClients = projects.filter((p) => !p.is_demo).length;
@@ -62,6 +64,8 @@ async function Projects() {
         </div>
         {canCreate && !hasDemo && <AddDemoButton />}
       </div>
+
+      <TimeSavedCard data={saved} scope="workspace" />
 
       {canCreate && <NewProjectForm hasProjects={projects.length > 0} />}
 

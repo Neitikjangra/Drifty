@@ -1,10 +1,10 @@
 # Drifty
 
-Chat-first client rooms for agencies. Drifty's AI turns client messages and voice notes into a
-confirmed change list, flags drift (conflicting feedback, versions that miss a change) and
-records a tamper-proof approval.
+Chat-first client rooms for agencies. Clients talk naturally (text or voice notes, in English, Hindi or
+Hinglish). Drifty's AI turns that into a confirmed English change list, flags drift (conflicting
+feedback, versions that miss a change) and records a tamper-proof approval.
 
-Built for the Nexconn Build Challenge 2026.
+**Live:** https://drifty-six.vercel.app · Built for the Nexconn Build Challenge 2026.
 
 ## Nexconn features used
 
@@ -13,9 +13,12 @@ Built for the Nexconn Build Challenge 2026.
 | ChatUI for Web (`@nexconn/chatui`) | Every room in the app (`components/chat/`) |
 | Chat SDK (`@nexconn/chat`, `@nexconn/engine`) | Connection, live message-metadata events |
 | Group channels | Client room and internal room per project |
-| Custom messages | `drifty:deliverable` card (more card types in later rounds) |
-| Message metadata (extensions) | Card status updated in place by the server |
+| Custom messages | 7 cards: deliverable, change list, conflict, drift check, receipt, approval check, scope |
+| Message metadata (extensions) | Card status updated in place by the server, live for every viewer |
+| Voice messages | HD voice notes recorded in Drifty, transcribed by Gemini (Hindi/Hinglish as spoken) |
+| Webhooks (`message:send`) | Signed, replay-protected message store (`app/api/nexconn/webhook`), plus a Chat SDK history sync on Summarise |
 | Platform Chat API (server) | Access tokens, channel creation, bot sends, metadata writes (`lib/nexconn/api.ts`) |
+| ChatUI switches | Message reactions on, delivery dots off, built-in channel list hidden (our own room tabs) |
 
 ## Stack
 
@@ -49,8 +52,12 @@ Values live only in `.env.local` and in Vercel project settings. Never commit th
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server only) |
 | `GEMINI_API_KEY` | Gemini API key (server only) |
 | `AI_MODEL` | `gemini-3.8-flash` |
-| `SENTRY_DSN` | Error monitoring |
-| `MAGIC_LINK_SIGNING_SECRET` | Signs client invite links |
+| `AI_FALLBACK_MODEL` | Comma-separated backup models when the main one is busy or out of quota |
+| `SENTRY_DSN` | Error monitoring (optional) |
+| `MAGIC_LINK_SIGNING_SECRET` | Signs client invite links and hashes rate-limit keys |
+| `CRON_SECRET` | Protects the daily nudges + digest cron (`/api/cron/daily`) |
+| `EMAIL_ENABLED` | `true` turns on "Email me a code" and emailed password resets (off by default) |
+| `SUPPORT_EMAIL` | Shown on pricing, privacy, terms and "Forgot password?" |
 | `SUPABASE_DB_URL` | Postgres connection string, used only by `pnpm db:migrate` (not deployed) |
 
 ## Scripts
@@ -59,8 +66,11 @@ Values live only in `.env.local` and in Vercel project settings. Never commit th
 pnpm lint        # ESLint
 pnpm typecheck   # next typegen + tsc
 pnpm test        # Vitest unit tests
+pnpm test:e2e    # end-to-end suites against a local server (http://localhost:3101)
+pnpm test:demo   # Playwright: demo path, chat layout, webhook-miss sync
 pnpm build       # production build
 pnpm db:migrate  # apply supabase/migrations/*.sql (needs SUPABASE_DB_URL)
+pnpm seed:demo <agency-email>   # add the demo project (local only)
 ```
 
 ### Supabase Auth settings
@@ -71,11 +81,11 @@ In Supabase → Authentication → URL Configuration, set **Site URL** to your a
 
 ## How access works
 
-- Agency users sign in with a Supabase magic link. The first sign-in creates a workspace
-  they own.
+- Agency users sign up with email + password. The first sign-in creates a workspace they own
+  (optionally with a demo project).
 - Each project has two Nexconn group channels: a **client room** and an **internal room**.
-- Clients join from a single-use invite link (7 days, revocable). They get a signed cookie, no
-  password, and are added only to the client room.
+- Clients join from a personal invite link (30 days, revocable, re-issuable). They get a signed
+  cookie, no password, and are added only to the client room.
 - Tables have row-level security. Writes happen only on the server after a permission check.
 
 ## Licences

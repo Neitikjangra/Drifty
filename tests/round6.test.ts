@@ -80,3 +80,13 @@ describe("FR-18 daily digest", () => {
     expect(t).toMatch(/Waiting on the team:\n• Banner v2, due 24 Nov/);
   });
 });
+
+import { formatSaved, timeSaved } from "@/lib/dashboard/time-saved";
+describe("time saved (estimate)", () => {
+  it("10 min per change list, 15 per drift, 5 per approval", () => {
+    expect(timeSaved({ changeLists: 2, drifts: 3, approvals: 4 }).minutes).toBe(85);
+    expect(formatSaved(45)).toBe("~45 min");
+    expect(formatSaved(85)).toBe("~1.5 hours");
+    expect(formatSaved(60)).toBe("~1 hour");
+  });
+});
