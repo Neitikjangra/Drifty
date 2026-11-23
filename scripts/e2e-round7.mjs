@@ -140,6 +140,10 @@ check("project page keeps settings in the Settings panel", op.includes("Archive 
 const cToken = np.json.inviteLink.split("/join/")[1];
 const cj = await client.req(`/api/join/${cToken}`, { method: "POST", body: { name: "Meera" } });
 check("client joins from the contact link", cj.status === 200, `${cj.status}`);
+// The public pages' logo: home is the projects list, the client's room, or the landing page
+check("logo takes the agency to their projects", (await owner.req("/api/me/home")).json?.home === "/app");
+check("logo takes the client to their room", (await client.req("/api/me/home")).json?.home === `/room/${pid}`);
+check("logo takes a visitor to the home page", (await stranger.req("/api/me/home")).json?.home === null);
 check("client can't delete the project", [403, 404].includes((await client.req(`/api/projects/${pid}`, { method: "DELETE", body: { confirmName: name } })).status));
 check("anonymous can't delete the project", (await stranger.req(`/api/projects/${pid}`, { method: "DELETE", body: { confirmName: name } })).status === 401);
 check("wrong name doesn't delete", (await owner.req(`/api/projects/${pid}`, { method: "DELETE", body: { confirmName: "nope" } })).status === 400);
