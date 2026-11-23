@@ -61,6 +61,8 @@ export interface ChatHostHandle {
 
 let active: Promise<ChatHostHandle> | null = null;
 let users = 0;
+/** ChatUI and the Chat SDK start once per page load; after a teardown they can't start again. */
+let bootedThisPage = false;
 let pendingTeardown: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -75,6 +77,13 @@ export function startChat(opts: ChatHostOptions): Promise<ChatHostHandle> {
     pendingTeardown = null;
   }
   if (active) return active;
+  if (bootedThisPage) {
+    // Back/forward or moving to another project inside the app: the chat was torn down and
+    // can't restart in this page load, so load the page fresh (sign-in and room are kept).
+    window.location.reload();
+    return new Promise<ChatHostHandle>(() => {});
+  }
+  bootedThisPage = true;
   active = boot(opts).catch((err) => {
     active = null;
     throw err;

@@ -95,6 +95,11 @@ export async function joinGroupChannel(channelId: string, userIds: string[]) {
   await call("/v4/group-channel/join", { channelId, userIds: userIds.slice(0, 100) });
 }
 
+/** POST /v4/group-channel/dismiss: permanently deletes a group channel for everyone (docs: managing-members/dismiss-group). */
+export async function dismissGroupChannel(channelId: string) {
+  await call("/v4/group-channel/dismiss", { channelId });
+}
+
 /** POST /v4/group-channel/leave: remove users from a group channel (max 100). */
 export async function leaveGroupChannel(channelId: string, userIds: string[]) {
   await call("/v4/group-channel/leave", { channelId, userIds: userIds.slice(0, 100) });

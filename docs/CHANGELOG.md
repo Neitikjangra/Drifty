@@ -1,5 +1,24 @@
 # Changelog
 
+## Cleaner projects, team, delete, session fix (2026-11-23)
+
+- **New project** is a button that opens a compact form: client, scope (what's included and
+  revision rounds), an optional client contact who gets an approver link straight away, the
+  creatives on the project, and brand rules.
+- **Project page shows only the chat and deliverables.** Overview numbers, client people and
+  invites, the team, brand rules and scope, archive and delete moved to **Settings** (and
+  **Overview**) at the top right.
+- **Team:** Projects → Team. Invite an account manager or a creative with a one-time link (7 days).
+  Account managers see every project; creatives see only the projects they're put on, and only
+  the internal room. The owner can remove teammates.
+- **Delete a project:** Settings → Archive / delete, type the client's name to confirm. Both rooms
+  are dismissed for everyone and files removed. Projects with approvals can't be deleted (the
+  ledger is permanent); archive those.
+- **Back/forward kept losing the chat:** the chat library starts once per page load, so returning
+  to a project with Back left it blank. The page now reloads itself once and the chat reconnects.
+  The sign-in cookie is now refreshed on every page, so a page outside /app can't drop it.
+- **All suites:** 88 unit tests; E2E Round 1: 70, Round 2: 36, Round 7 (new): 31.
+
 ## Market-ready: report, alerts, pre-flight check (2026-11-23)
 
 - **Monthly client report:** Project → Monthly report →. Shows approvals, rounds, turnaround,

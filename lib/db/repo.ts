@@ -102,9 +102,13 @@ export async function roomMembers(
   clientRoom: boolean,
 ): Promise<{ userId: string; name: string }[]> {
   const db = supabaseAdmin();
-  let mq = db.from("members").select("user_id").eq("workspace_id", workspaceId);
-  if (clientRoom) mq = mq.in("role", ["owner", "am"]);
+  // Client room: owners/AMs. Internal room: owners/AMs plus the creatives on this project.
+  const mq = db.from("members").select("user_id").eq("workspace_id", workspaceId).in("role", ["owner", "am"]);
   const memberIds = (check("roomMembers.members", await mq) as { user_id: string }[]).map((m) => m.user_id);
+  if (!clientRoom) {
+    const team = check("roomMembers.team", await db.from("project_members").select("user_id").eq("project_id", projectId)) as { user_id: string }[];
+    memberIds.push(...team.map((t) => t.user_id).filter((id) => !memberIds.includes(id)));
+  }
   const guestIds = clientRoom
     ? (
         check(

@@ -1,3 +1,4 @@
+import { isOnProject } from "@/lib/team/server";
 import { z } from "zod";
 import { getCaller } from "@/lib/access";
 import { getGuestRole, getProfilesByNexconnIds, projectsByChannelIds, roomMembers } from "@/lib/db/repo";
@@ -36,8 +37,10 @@ export async function POST(req: Request) {
     const perProject = await Promise.all(
       projects.map(async (p) => {
         const out: { groupId: string; name: string; memberCount?: number }[] = [];
-        const canClient = caller.kind === "member" ? caller.membership?.workspace.id === p.workspace_id : Boolean(await getGuestRole(p.id, caller.userId));
-        const canInternal = caller.kind === "member" && caller.membership?.workspace.id === p.workspace_id;
+        const sameWorkspace = caller.kind === "member" && caller.membership?.workspace.id === p.workspace_id;
+        const role = caller.kind === "member" ? caller.membership?.role : undefined;
+        const canClient = caller.kind === "member" ? sameWorkspace && role !== "creative" : Boolean(await getGuestRole(p.id, caller.userId));
+        const canInternal = sameWorkspace && (role !== "creative" || (await isOnProject(p.id, caller.userId)));
         const [clientN, internalN] = await Promise.all([
           canClient && p.client_channel_id ? roomMembers(p.id, p.workspace_id, true).then((m) => m.length) : Promise.resolve(-1),
           canInternal && p.internal_channel_id ? roomMembers(p.id, p.workspace_id, false).then((m) => m.length) : Promise.resolve(-1),

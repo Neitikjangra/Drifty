@@ -8,6 +8,8 @@ import { getCaller } from "@/lib/access";
 import { addToRoom, removeFromRoom } from "@/lib/nexconn/rooms";
 import { supabaseAdmin } from "@/lib/db/supabase-server";
 import { handleRouteError, jsonError, ok, readBody } from "@/lib/http";
+import { setProjectTeam } from "@/lib/team/server";
+import { deleteProjectEverywhere } from "@/lib/projects/delete";
 
 const body = z
   .object({
@@ -15,8 +17,10 @@ const body = z
     roundsIncluded: z.number().int().min(1).max(20).optional(),
     archived: z.boolean().optional(),
     brandRules: z.string().trim().max(4000).optional(),
+    scope: z.string().trim().max(1000).optional(),
+    teamIds: z.array(z.uuid()).max(50).optional(),
   })
-  .refine((b) => b.approverId !== undefined || b.roundsIncluded !== undefined || b.archived !== undefined || b.brandRules !== undefined);
+  .refine((b) => Object.values(b).some((v) => v !== undefined));
 
 /** PATCH /api/projects/:id: set the approver (a guest of this project), rounds, or archive/restore. Owner/AM only. */
 export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]">) {
@@ -59,12 +63,45 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
       const res = await supabaseAdmin().from("projects").update({ rounds_included: input.roundsIncluded }).eq("id", id);
       if (res.error) throw new Error("update rounds failed");
     }
-    if (input.brandRules !== undefined) {
-      const res = await supabaseAdmin().from("projects").update({ brand_rules: input.brandRules }).eq("id", id);
-      if (res.error) throw new Error("update brand rules failed");
+    if (input.brandRules !== undefined || input.scope !== undefined) {
+      const res = await supabaseAdmin()
+        .from("projects")
+        .update({ ...(input.brandRules !== undefined && { brand_rules: input.brandRules }), ...(input.scope !== undefined && { scope_text: input.scope }) })
+        .eq("id", id);
+      if (res.error) throw new Error("update project details failed");
     }
+    if (input.teamIds) await setProjectTeam(access.project, input.teamIds);
     return ok();
   } catch (err) {
     return handleRouteError("projects/patch", err);
+  }
+}
+
+const delBody = z.object({ confirmName: z.string().max(64) });
+
+/**
+ * DELETE /api/projects/:id: permanently deletes the project, its rooms, files and history.
+ * Owner/AM only, the client's name must be typed to confirm, and a project with approvals is
+ * refused: the approval ledger is permanent (archive it instead).
+ */
+export async function DELETE(req: Request, ctx: RouteContext<"/api/projects/[id]">) {
+  const { id } = await ctx.params;
+  const input = await readBody(req, delBody);
+  if (!input) return jsonError(400, "Type the client's name to confirm.");
+  try {
+    const res = await routeProjectAccess(id);
+    if (!res.ok) return res.status === 401 ? jsonError(401, "Please sign in first.") : jsonError(404, "Project not found.");
+    const access = res.access;
+    if (access.kind !== "member" || !canManageProjects(access.role)) return jsonError(403, "Only owners and account managers can delete projects.");
+    const limited = await rateLimit(req, "projects-delete", LIMITS.write, access.userId);
+    if (limited) return limited;
+    if (input.confirmName.trim().toLowerCase() !== access.project.client_name.trim().toLowerCase()) {
+      return jsonError(400, "The name doesn't match. Type the client's name exactly to delete.");
+    }
+    const result = await deleteProjectEverywhere(access.project);
+    if (!result.ok) return jsonError(409, result.error, { code: "has_approvals" });
+    return ok({ deleted: true });
+  } catch (err) {
+    return handleRouteError("projects/delete", err);
   }
 }

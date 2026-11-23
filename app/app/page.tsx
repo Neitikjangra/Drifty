@@ -7,6 +7,7 @@ import { getCaller } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { guestProjectIds, listArchivedProjects, listProjects } from "@/lib/db/repo";
 import { clientLimit } from "@/lib/plans";
+import { listTeam, projectIdsFor } from "@/lib/team/server";
 import { AddDemoButton } from "./add-demo-button";
 import { TimeSavedCard } from "@/components/time-saved-card";
 import { loadWorkspaceTimeSaved } from "@/lib/dashboard/time-saved-load";
@@ -34,7 +35,17 @@ async function Projects() {
   if (!caller.membership) redirect("/app/onboarding");
 
   const ws = caller.membership.workspace;
-  const [projects, archived, saved] = await Promise.all([listProjects(ws.id), listArchivedProjects(ws.id), loadWorkspaceTimeSaved(ws.id)]);
+  const [allProjects, allArchived, saved, mine, team] = await Promise.all([
+    listProjects(ws.id),
+    listArchivedProjects(ws.id),
+    loadWorkspaceTimeSaved(ws.id),
+    caller.membership.role === "creative" ? projectIdsFor(caller.userId) : Promise.resolve(null),
+    canManageProjects(caller.membership.role) ? listTeam(ws.id) : Promise.resolve([]),
+  ]);
+  const creatives = team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: m.name }));
+  // Creatives see only the projects they're on.
+  const projects = mine ? allProjects.filter((p) => mine.has(p.id)) : allProjects;
+  const archived = mine ? allArchived.filter((p) => mine.has(p.id)) : allArchived;
   const canCreate = canManageProjects(caller.membership.role);
   const limit = clientLimit(ws.plan);
   const activeClients = projects.filter((p) => !p.is_demo).length;
@@ -67,18 +78,19 @@ async function Projects() {
             </p>
           )}
         </div>
-        {canCreate && !hasDemo && <AddDemoButton />}
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreate && !hasDemo && <AddDemoButton />}
+          {canCreate && <NewProjectForm hasProjects={projects.length > 0} creatives={creatives} />}
+        </div>
       </div>
 
       <TimeSavedCard data={saved} scope="workspace" />
-
-      {canCreate && <NewProjectForm hasProjects={projects.length > 0} />}
 
       {projects.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <p className="font-medium">No projects yet</p>
           <p className="text-muted-foreground mt-1 text-sm">
-            {canCreate ? "Create your first client project above. Drifty sets up both rooms for you." : "Your team hasn't created any projects yet."}
+            {canCreate ? "Tap Create your first project above. Drifty sets up both rooms for you." : "Your team hasn't created any projects yet."}
           </p>
         </div>
       ) : (

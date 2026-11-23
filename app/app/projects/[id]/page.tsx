@@ -23,6 +23,11 @@ import { InternalSummariseBar } from "@/components/chat/internal-summarise";
 import { DemoGuide } from "./demo-guide";
 import { demoProgress } from "@/lib/demo/progress";
 import { ArchiveButton } from "../../archive-button";
+import { DeleteProject, ProjectSettings, ProjectTeamPanel, ScopePanel, SettingsButtons } from "./project-settings";
+import { listTeam, projectTeamIds } from "@/lib/team/server";
+import { approvalCount } from "@/lib/projects/delete";
+import { supabaseAdmin } from "@/lib/db/supabase-server";
+import { TEAM_ROLE_LABEL } from "@/lib/team/rules";
 import { driftCounts, sendLabel } from "@/lib/drift/rules";
 
 /** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
@@ -130,12 +135,14 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
             {project.archived && <span className="text-muted-foreground ml-2 align-middle text-sm font-normal">(archived)</span>}
           </h1>
         </div>
-        {canManage && <ArchiveButton projectId={project.id} archived={project.archived} redirectTo={project.archived ? undefined : "/app"} />}
+        <SettingsButtons canManage={canManage} />
       </div>
 
-      <Suspense fallback={<PanelLoading label="Loading the dashboard…" className="h-28" />}>
-        <TopPanels project={project} canManage={canManage} />
-      </Suspense>
+      {project.is_demo && canManage && (
+        <Suspense fallback={null}>
+          <DemoPanel project={project} />
+        </Suspense>
+      )}
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row">
         {tabs.length && appKey ? (
@@ -168,30 +175,25 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
   );
 }
 
-async function TopPanels({ project, canManage }: { project: Project; canManage: boolean }) {
-  const deliverables = await getDeliverables(project.id);
-  const [dashboard, demo, saved] = await Promise.all([
-    loadDashboard(deliverables, project.rounds_included),
-    project.is_demo && canManage ? demoProgress(project.id) : Promise.resolve(null),
-    loadTimeSaved(deliverables.map((d) => d.id)),
-  ]);
-  return (
-    <>
-      {demo && <DemoGuide projectId={project.id} progress={demo} />}
-      <TimeSavedCard data={saved} scope="project" />
-      <ProjectDashboard projectId={project.id} data={dashboard} canManage={canManage} />
-    </>
-  );
+async function DemoPanel({ project }: { project: Project }) {
+  const demo = await demoProgress(project.id);
+  return demo ? <DemoGuide projectId={project.id} progress={demo} /> : null;
 }
 
 async function SidePanels({ project, canManage, canUpload }: { project: Project; canManage: boolean; canUpload: boolean }) {
-  const [guests, invites, deliverables, brandRules, memory] = await Promise.all([
+  const [guests, invites, deliverables, brandRules, memory, team, onProject, approvals, details] = await Promise.all([
     listGuests(project.id),
     canManage ? listInvites(project.id) : [],
     getDeliverables(project.id),
     canUpload ? loadBrandRules(project.id) : Promise.resolve(""),
     canUpload ? loadTasteMemory(project.id).catch(() => []) : Promise.resolve([]),
+    listTeam(project.workspace_id),
+    projectTeamIds(project.id),
+    canManage ? approvalCount(project.id) : Promise.resolve(0),
+    supabaseAdmin().from("projects").select("scope_text").eq("id", project.id).maybeSingle(),
   ]);
+  const [dashboard, saved] = await Promise.all([loadDashboard(deliverables, project.rounds_included), loadTimeSaved(deliverables.map((d) => d.id))]);
+  const scope = (details.data as { scope_text: string } | null)?.scope_text ?? "";
   const alerts = await latestVersionAlerts(deliverables.map((d) => d.id));
   const nameOf = new Map(guests.map((g) => [g.user_id, g.display_name]));
   const deliverableRows: DeliverableRow[] = deliverables.map((d) => {
@@ -212,8 +214,78 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
   return (
     <>
       <DeliverablesPanel projectId={project.id} clientChannelId={project.client_channel_id} canCreate={canManage} canUpload={canUpload} hasApprover={Boolean(project.approver_id)} items={deliverableRows} />
-      {canUpload && <BrandRulesPanel projectId={project.id} rules={brandRules} memoryCount={memory.length} canEdit={canManage} />}
-      <PeoplePanel projectId={project.id} projectName={project.client_name} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />
+      <ProjectSettings
+        title={`${project.client_name} · settings`}
+        tabs={[
+          {
+            id: "overview",
+            label: "Overview",
+            content: (
+              <>
+                <TimeSavedCard data={saved} scope="project" />
+                <ProjectDashboard projectId={project.id} data={dashboard} canManage={canManage} />
+              </>
+            ),
+          },
+          ...(canManage
+            ? [
+                {
+                  id: "people" as const,
+                  label: "Client people",
+                  content: <PeoplePanel projectId={project.id} projectName={project.client_name} canManage={canManage} approverId={project.approver_id} {...buildPeople(guests, invites)} />,
+                },
+              ]
+            : []),
+          {
+            id: "team",
+            label: "Team",
+            content: (
+              <ProjectTeamPanel
+                projectId={project.id}
+                canEdit={canManage}
+                onProject={onProject}
+                creatives={team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: m.name }))}
+                managers={team.filter((m) => m.role !== "creative").map((m) => ({ userId: m.userId, name: m.name, role: TEAM_ROLE_LABEL[m.role] }))}
+              />
+            ),
+          },
+          ...(canUpload
+            ? [
+                {
+                  id: "brand" as const,
+                  label: "Brand & scope",
+                  content: (
+                    <>
+                      <BrandRulesPanel projectId={project.id} rules={brandRules} memoryCount={memory.length} canEdit={canManage} />
+                      <ScopePanel projectId={project.id} scope={scope} canEdit={canManage} />
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          ...(canManage
+            ? [
+                {
+                  id: "project" as const,
+                  label: "Archive / delete",
+                  content: (
+                    <>
+                      <section className="space-y-2 rounded-lg border p-3">
+                        <h3 className="text-sm font-semibold">{project.archived ? "Restore" : "Archive"}</h3>
+                        <p className="text-muted-foreground text-xs">Archiving keeps rooms, history and the ledger, and frees a slot on your plan.</p>
+                        <ArchiveButton projectId={project.id} archived={project.archived} redirectTo={project.archived ? undefined : "/app"} />
+                      </section>
+                      <section className="space-y-2 rounded-lg border border-red-200 p-3">
+                        <h3 className="text-sm font-semibold text-red-700">Delete project</h3>
+                        <DeleteProject projectId={project.id} clientName={project.client_name} approvals={approvals} />
+                      </section>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
     </>
   );
 }

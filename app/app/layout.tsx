@@ -39,6 +39,11 @@ async function AccountBar() {
         <span className="text-muted-foreground hidden truncate sm:inline">{caller.membership.workspace.name}</span>
       )}
       {caller.profile && <PushToggle compact />}
+      {caller.membership && (
+        <Link href="/app/team" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+          Team
+        </Link>
+      )}
       <Link href="/help" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
         Help
       </Link>

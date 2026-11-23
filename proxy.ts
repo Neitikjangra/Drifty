@@ -45,6 +45,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Every page (not API routes, which save refreshed cookies themselves, or static files):
+// a page that reads the session without this could rotate the sign-in token and drop the
+// new one, signing the person out on their next page.
 export const config = {
-  matcher: ["/", "/app/:path*", "/login", "/auth/:path*"],
+  matcher: ["/((?!api/|_next/|brand/|demo/|sw\.js|favicon\.ico|.*\.(?:png|jpg|jpeg|webp|gif|svg|ico|txt|xml|webmanifest)$).*)"],
 };

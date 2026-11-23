@@ -3,6 +3,7 @@ import type { GuestRole, MemberRole } from "@/lib/auth/permissions";
 import { getAgencyUser, getGuestId } from "@/lib/auth/session";
 import { getGuestRole, getMembership, getProfile, getProject } from "@/lib/db/repo";
 import type { Membership, Profile, Project } from "@/lib/db/types";
+import { isOnProject } from "@/lib/team/server";
 
 /** Who is calling, resolved and verified on the server. */
 export type Caller =
@@ -57,6 +58,8 @@ export async function projectAccess(projectId: string, caller?: Caller): Promise
 
   if (c.kind === "member") {
     if (!c.membership || c.membership.workspace.id !== project.workspace_id) return null;
+    // Creatives only get the projects they're on (owners and account managers get all).
+    if (c.membership.role === "creative" && !(await isOnProject(project.id, c.userId))) return null;
     return { kind: "member", project, role: c.membership.role, userId: c.userId, profile: c.profile };
   }
   const role = guestRole;
