@@ -58,7 +58,9 @@ async function Projects() {
     <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Your <span className="accent-serif text-sheen text-[1.15em]">projects</span>
+          </h1>
           <p className="text-muted-foreground text-sm">One project per client: a client room, an internal room and their drafts.</p>
           {limit !== null && (
             <p className="text-muted-foreground mt-1 text-xs">
@@ -102,7 +104,7 @@ async function Projects() {
             <li key={p.id}>
               <Link
                 href={`/app/projects/${p.id}`}
-                className="group bg-card hover:border-primary/50 flex h-full items-start gap-3 rounded-2xl border p-4 transition-colors"
+                className="group lux-card flex h-full items-start gap-3 rounded-2xl p-4 transition-transform hover:-translate-y-0.5"
               >
                 <IconBadge icon={MessagesSquare} />
                 <div className="min-w-0 flex-1">

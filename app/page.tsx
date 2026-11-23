@@ -117,13 +117,14 @@ export default function Home() {
       <SiteHeader />
       <main className="flex-1">
         {/* Hero */}
-        <section className="lime-glow relative overflow-hidden">
-          <div className="mx-auto w-full max-w-5xl px-4 pt-16 pb-14 text-center sm:pt-24">
+        <section className="relative overflow-hidden">
+          <div className="lux-beams pointer-events-none absolute inset-0" aria-hidden />
+          <div className="lux-rise relative mx-auto w-full max-w-5xl px-4 pt-16 pb-14 text-center sm:pt-24">
             <Eyebrow>
               <Sparkles className="mr-1.5 size-3.5" aria-hidden /> For agencies and freelancers
             </Eyebrow>
             <h1 className="mx-auto mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
-              Stop chasing client feedback on <span className="text-primary">WhatsApp.</span>
+              Stop chasing client feedback on <span className="accent-serif text-sheen pr-1 text-[1.12em]">WhatsApp.</span>
             </h1>
             <p className="text-muted-foreground mx-auto mt-5 max-w-2xl text-base leading-relaxed sm:text-lg">
               Drifty is the room where client feedback actually happens. AI turns messages and voice notes into a confirmed change list,
@@ -146,12 +147,12 @@ export default function Home() {
           <div className="text-center">
             <Eyebrow>Why Drifty</Eyebrow>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Three kinds of drift. <span className="text-primary">One room.</span>
+              Three kinds of drift. <span className="accent-serif text-sheen text-[1.12em]">One room.</span>
             </h2>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {DRIFTS.map((d) => (
-              <div key={d.title} className="bg-card hover:border-primary/40 rounded-2xl border p-5 transition-colors">
+              <div key={d.title} className="lux-card rounded-2xl p-6 transition-transform hover:-translate-y-0.5">
                 <IconBadge icon={d.icon} />
                 <h3 className="mt-4 font-semibold">{d.title}</h3>
                 <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">{d.body}</p>
@@ -175,7 +176,9 @@ export default function Home() {
         <section id="how" className="border-y bg-[#0f1012] scroll-mt-16">
           <div className="mx-auto w-full max-w-5xl px-4 py-14">
             <Eyebrow>How it works</Eyebrow>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight">From first draft to approval in three steps</h2>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">
+              From first draft to <span className="accent-serif text-sheen text-[1.12em]">approval</span> in three steps
+            </h2>
             <ol className="mt-8 grid gap-4 sm:grid-cols-3">
               {STEPS.map((s) => (
                 <li key={s.n} className="bg-card rounded-2xl border p-5">
@@ -202,10 +205,12 @@ export default function Home() {
         <section id="pricing" className="mx-auto w-full max-w-5xl scroll-mt-16 px-4 py-14">
           <div className="text-center">
             <Eyebrow>Pricing</Eyebrow>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight">Priced per agency, not per client</h2>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">
+              Priced per <span className="accent-serif text-sheen text-[1.12em]">agency,</span> not per client
+            </h2>
           </div>
           <div className="mx-auto mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
-            <div className="bg-card rounded-2xl border p-6">
+            <div className="lux-card rounded-2xl p-6">
               <h3 className="font-semibold">Free</h3>
               <p className="mt-1 text-4xl font-bold">₹0</p>
               <Ticks items={FREE} />
@@ -255,7 +260,7 @@ export default function Home() {
         <section className="lime-glow border-t">
           <div className="mx-auto w-full max-w-5xl px-4 py-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight">
-              Try it on a demo client in <span className="text-primary">5 minutes</span>
+              Try it on a demo client in <span className="accent-serif text-sheen text-[1.12em]">5 minutes</span>
             </h2>
             <p className="text-muted-foreground mt-2 text-sm">Sign up, and Drifty sets up a sample client with real feedback for you to work through.</p>
             <Link href="/login?mode=signup" className={`${buttonVariants({ size: "lg" })} mt-6`}>

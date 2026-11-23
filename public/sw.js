@@ -14,8 +14,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Drifty", {
       body: data.body || "Something changed in your client room.",
-      icon: "/brand/icon-192.png",
-      badge: "/brand/icon-192.png",
+      icon: "/brand/icon-lime-192.png",
+      badge: "/brand/icon-lime-192.png",
       tag: data.tag || undefined,
       // A newer alert with the same tag replaces the old one and still buzzes.
       renotify: Boolean(data.tag),

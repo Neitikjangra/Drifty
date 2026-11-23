@@ -26,7 +26,7 @@ export const BASE = `
 .item.rejected .txt{text-decoration:line-through}
 .tag{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;background:#eff3ef;color:#24343a;white-space:nowrap}
 .chip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;white-space:nowrap}
-.src{font-size:12px;color:#354e57;border-left:3px solid #aec3b0;padding-left:6px;font-style:italic}
+.src{font-size:12px;color:#4a5056;border-left:3px solid #c8f135;padding-left:6px;font-style:italic}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
 button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:13px;font-weight:600;border-radius:999px;padding:6px 12px;background:#c8f135;color:#0b0c0e}
 button.secondary{background:#ffffff;color:#0b0c0e;border:1px solid #d5d9d2}

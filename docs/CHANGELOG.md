@@ -1,5 +1,14 @@
 # Changelog
 
+## Premium finish, no blue left (2026-11-23)
+
+- **Every blue/teal is now the lime green:** the logo mark, app icons, favicon and share image
+  are lime and near-black; chat avatars (people, rooms, Drifty AI) are branded lime avatars passed
+  through ChatUI's documented profile `avatarUrl`, replacing its default light-blue circles.
+- **Premium touches:** italic serif accent words (Instrument Serif) with a lime sheen, gradient
+  hairline borders on key cards, soft light beams behind the hero, faint film grain, a gentle
+  rise-in on the hero (off when the device asks for reduced motion).
+
 ## New look: dark theme with a lime accent (2026-11-23)
 
 - Dark-first theme: near-black surfaces, soft white text, one neon-lime accent (#c8f135).

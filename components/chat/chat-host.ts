@@ -1,5 +1,6 @@
 "use client";
 import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
+import { BOT_AVATAR, personAvatar, ROOM_AVATAR } from "./avatars";
 import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
 import { CHANGELIST_TAG, CONFLICT_TAG, defineChangeListElement, defineConflictElement } from "./feedback-cards";
 import { defineDriftElement, DRIFT_TAG } from "./drift-card";
@@ -142,7 +143,10 @@ function createDirectory() {
         const d = await postJson<Directory>("/api/chat/directory", { userIds: missing }).catch(() => null);
         d?.users.forEach((u) => users.set(u.userId, u.name));
       }
-      return ids.map((userId) => ({ userId, name: users.get(userId) ?? "Member" }));
+      return ids.map((userId) => {
+        const name = userId === BOT_USER_ID ? BOT_NAME : (users.get(userId) ?? "Member");
+        return { userId, name, avatarUrl: userId === BOT_USER_ID ? BOT_AVATAR : personAvatar(name) };
+      });
     },
     async groups(all: string[]) {
       const ids = valid(all);
@@ -155,6 +159,7 @@ function createDirectory() {
         groupId,
         name: groups.get(groupId)?.name ?? "Room",
         memberCount: groups.get(groupId)?.memberCount ?? 0,
+        avatarUrl: ROOM_AVATAR,
       }));
     },
     async members(groupId: string) {
@@ -212,7 +217,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
       reqGroupProfiles: (ids) => dir.groups(ids),
       reqGroupMembers: (groupId) => dir.members(groupId),
       async reqSystemProfiles(ids) {
-        return ids.map((systemId) => ({ systemId, name: "Drifty" }));
+        return ids.map((systemId) => ({ systemId, name: "Drifty", avatarUrl: BOT_AVATAR }));
       },
     },
   });
@@ -347,7 +352,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     keeper.markConnected();
   }
   // ChatUI caches profiles in localStorage; make sure the bot always shows its real name.
-  app.updateUserProfile({ userId: BOT_USER_ID, name: BOT_NAME });
+  app.updateUserProfile({ userId: BOT_USER_ID, name: BOT_NAME, avatarUrl: BOT_AVATAR });
 
   const root = document.createElement("nc-chat-ui-app-provider");
   root.style.width = "100%";
@@ -368,7 +373,7 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
     const known = opts.knownGroups?.find((k) => k.groupId === channelId);
     if (known) {
       // Name known from the page: open now, fill in the member count when the directory answers.
-      app.updateGroupProfile({ groupId: known.groupId, name: known.name, memberCount: 0 });
+      app.updateGroupProfile({ groupId: known.groupId, name: known.name, memberCount: 0, avatarUrl: ROOM_AVATAR });
       void dir.groups([channelId]).then(([g]) => g && app.updateGroupProfile(g)).catch(() => {});
     } else {
       const [g] = await dir.groups([channelId]);

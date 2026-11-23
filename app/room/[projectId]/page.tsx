@@ -42,7 +42,7 @@ async function GuestRoom({ params }: { params: PageProps<"/room/[projectId]">["p
     <main className="flex h-dvh flex-col gap-2 p-2 sm:p-4">
       <header className="flex items-center justify-between gap-2 px-1">
         <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
-          <Image src="/brand/drifty-mark.png" alt="" width={24} height={24} className="rounded-md" />
+          <Image src="/brand/drifty-mark-lime.png" alt="" width={24} height={24} className="rounded-md" />
           <span className="truncate">{access.project.client_name}</span>
         </h1>
         <div className="flex shrink-0 items-center gap-3">
