@@ -28,8 +28,8 @@ export const BASE = `
 .chip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;white-space:nowrap}
 .src{font-size:12px;color:#354e57;border-left:3px solid #aec3b0;padding-left:6px;font-style:italic}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
-button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:13px;font-weight:600;border-radius:8px;padding:6px 10px;background:#124559;color:#fcfdf9}
-button.secondary{background:#fcfdf9;color:#01161e;border:1px solid #aec3b0}
+button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:13px;font-weight:600;border-radius:999px;padding:6px 12px;background:#c8f135;color:#0b0c0e}
+button.secondary{background:#ffffff;color:#0b0c0e;border:1px solid #d5d9d2}
 button.full{width:100%;padding:9px 10px;font-size:14px}
 button[disabled]{opacity:.55;cursor:default}
 input,textarea{box-sizing:border-box;width:100%;border:1px solid #aec3b0;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}

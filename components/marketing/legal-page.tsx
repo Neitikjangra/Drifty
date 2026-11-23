@@ -7,7 +7,7 @@ export function LegalPage({ title, updated, draft = true, children }: { title: s
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
         {draft && (
-          <p className="mb-6 rounded-md border border-beige-400 bg-beige-500 p-3 text-sm text-beige-100">
+          <p className="mb-6 rounded-xl border border-beige-400 bg-beige-500 p-3 text-sm text-beige-100">
             Pilot draft: this text is being reviewed and may change before general launch.
           </p>
         )}

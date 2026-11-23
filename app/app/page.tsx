@@ -7,6 +7,8 @@ import { getCaller } from "@/lib/access";
 import { canManageProjects } from "@/lib/auth/permissions";
 import { guestProjectIds, listArchivedProjects, listProjects } from "@/lib/db/repo";
 import { clientLimit } from "@/lib/plans";
+import { ArrowUpRight, FolderPlus, MessagesSquare, UserCheck, UserPlus } from "lucide-react";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { listTeam, projectIdsFor } from "@/lib/team/server";
 import { AddDemoButton } from "./add-demo-button";
 import { TimeSavedCard } from "@/components/time-saved-card";
@@ -56,7 +58,7 @@ async function Projects() {
     <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground text-sm">One project per client: a client room, an internal room and their drafts.</p>
           {limit !== null && (
             <p className="text-muted-foreground mt-1 text-xs">
@@ -87,8 +89,9 @@ async function Projects() {
       <TimeSavedCard data={saved} scope="workspace" />
 
       {projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="font-medium">No projects yet</p>
+        <div className="bg-card flex flex-col items-center rounded-2xl border border-dashed p-10 text-center">
+          <IconBadge icon={FolderPlus} size="lg" />
+          <p className="mt-3 font-medium">No projects yet</p>
           <p className="text-muted-foreground mt-1 text-sm">
             {canCreate ? "Tap Create your first project above. Drifty sets up both rooms for you." : "Your team hasn't created any projects yet."}
           </p>
@@ -99,17 +102,23 @@ async function Projects() {
             <li key={p.id}>
               <Link
                 href={`/app/projects/${p.id}`}
-                className="hover:bg-muted/50 block rounded-lg border p-4 transition-colors"
+                className="group bg-card hover:border-primary/50 flex h-full items-start gap-3 rounded-2xl border p-4 transition-colors"
               >
-                <p className="truncate font-medium">
-                  {p.client_name}
-                  {p.is_demo && <span className="ml-2 rounded bg-beige-400 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-beige-100">DEMO</span>}
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Created {new Date(p.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  {" · "}
-                  {p.approver_id ? "Approver set" : "No approver yet"}
-                </p>
+                <IconBadge icon={MessagesSquare} />
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <span className="truncate">{p.client_name}</span>
+                    {p.is_demo && <span className="bg-primary text-primary-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold">DEMO</span>}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Created {new Date(p.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <p className={`mt-2 inline-flex items-center gap-1 text-xs ${p.approver_id ? "text-primary" : "text-amber-200"}`}>
+                    {p.approver_id ? <UserCheck className="size-3.5" aria-hidden /> : <UserPlus className="size-3.5" aria-hidden />}
+                    {p.approver_id ? "Approver set" : "No approver yet"}
+                  </p>
+                </div>
+                <ArrowUpRight className="text-muted-foreground group-hover:text-primary size-4 shrink-0 transition-colors" aria-hidden />
               </Link>
             </li>
           ))}
@@ -119,7 +128,7 @@ async function Projects() {
       {archived.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-muted-foreground text-sm font-medium">Archived</h2>
-          <ul className="divide-y rounded-lg border">
+          <ul className="bg-card divide-y rounded-2xl border">
             {archived.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                 <Link href={`/app/projects/${p.id}`} className="min-w-0 truncate hover:underline">

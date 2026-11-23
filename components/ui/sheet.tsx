@@ -35,7 +35,7 @@ export function Sheet({
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
-      className={`bg-background text-foreground m-0 ml-auto h-dvh max-h-dvh w-full max-w-full border-l p-0 shadow-xl backdrop:bg-black/40 ${width}`}
+      className={`bg-card text-foreground m-0 ml-auto h-dvh max-h-dvh w-full max-w-full border-l p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm ${width}`}
     >
       <div className="flex h-full flex-col">
         <header className="flex items-start justify-between gap-3 border-b p-4">

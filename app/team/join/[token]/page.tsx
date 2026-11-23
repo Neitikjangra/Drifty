@@ -57,7 +57,7 @@ async function TeamJoin({ params }: { params: PageProps<"/team/join/[token]">["p
     return (
       <div className="w-full max-w-sm space-y-4 text-center">
         {header}
-        <p className={same ? "text-sm" : "text-sm text-red-600"} role={same ? "status" : "alert"}>
+        <p className={same ? "text-sm" : "text-sm text-red-400"} role={same ? "status" : "alert"}>
           {same ? "You're already in this workspace." : `You're signed in to ${membership.workspace.name}. Sign out and use another email to join ${inv.workspaceName}.`}
         </p>
         <Link href="/app" className={buttonVariants({ variant: "outline", className: "w-full" })}>

@@ -40,7 +40,7 @@ export function ResetForm() {
   }
 
   const cls =
-    "border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 text-base outline-none focus-visible:ring-2 sm:text-sm";
+    "border-input bg-muted/60 focus-visible:ring-ring h-10 w-full rounded-xl border px-3 text-base outline-none focus-visible:ring-2 sm:text-sm";
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -62,7 +62,7 @@ export function ResetForm() {
             <input id="pw2" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} className={cls} />
           </div>
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {error}
             </p>
           )}

@@ -14,7 +14,7 @@ export function ProjectDashboard({ projectId, data, canManage }: { projectId: st
   const { byStatus: s } = data;
   const totalRounds = data.rows.reduce((a, r) => a + r.rounds, 0);
   return (
-    <section className="space-y-3 rounded-lg border p-3" aria-label="Project dashboard">
+    <section className="space-y-3 rounded-2xl border p-3 bg-card" aria-label="Project dashboard">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile label="Deliverables" value={data.rows.length}>
           {data.rows.length ? (
@@ -128,7 +128,7 @@ function RoundsIncluded({ projectId, value, canManage, overLimit }: { projectId:
       <Button size="sm" className="h-7 px-2" onClick={save} disabled={busy}>
         {busy ? "…" : "Save"}
       </Button>
-      {error && <span className="text-red-600">{error}</span>}
+      {error && <span className="text-red-400">{error}</span>}
     </span>
   );
 }

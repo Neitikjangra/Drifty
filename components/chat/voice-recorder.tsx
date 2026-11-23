@@ -168,7 +168,7 @@ export function VoiceRecorder({ projectId, eventName }: { projectId: string; eve
         )}
         {phase.kind === "error" && (
           <>
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {phase.message}
             </p>
             <Button variant="outline" className="w-full" onClick={() => setPhase({ kind: "idle" })}>

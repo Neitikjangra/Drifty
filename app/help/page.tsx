@@ -88,7 +88,7 @@ export default function HelpPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Help</h1>
         <p className="text-muted-foreground mt-1 text-sm">Short guides for the things agencies do every day in Drifty.</p>
 
-        <div className="mt-6 divide-y rounded-lg border">
+        <div className="mt-6 divide-y rounded-2xl border bg-card">
           {GUIDES.map((g, i) => (
             <details key={g.q} className="group p-4" open={i === 0}>
               <summary className="cursor-pointer list-none font-medium">
@@ -104,7 +104,7 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <section className="bg-secondary mt-8 rounded-lg border p-5">
+        <section className="bg-secondary mt-8 rounded-2xl border p-5">
           <h2 className="font-semibold">Still stuck?</h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Email <SupportEmail fallback="us from inside the app" subject="Drifty help" />. We usually reply the same working day.

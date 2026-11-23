@@ -26,7 +26,7 @@ export function AddDemoButton() {
         {busy ? "Setting up the demo…" : "Try the demo project"}
       </Button>
       {error && (
-        <span className="text-xs text-red-600" role="alert">
+        <span className="text-xs text-red-400" role="alert">
           {error}
         </span>
       )}

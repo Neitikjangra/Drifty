@@ -33,7 +33,7 @@ export function ArchiveButton({ projectId, archived, redirectTo }: { projectId: 
         {busy ? "Saving…" : archived ? "Restore" : "Archive"}
       </Button>
       {error && (
-        <span className="max-w-64 text-right text-xs text-red-600" role="alert">
+        <span className="max-w-64 text-right text-xs text-red-400" role="alert">
           {error}
         </span>
       )}

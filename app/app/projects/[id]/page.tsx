@@ -161,7 +161,7 @@ async function ProjectContent({ params }: { params: PageProps<"/app/projects/[id
             }
           />
         ) : (
-          <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border p-6 text-sm">
+          <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-2xl border p-6 text-sm bg-card">
             This project&apos;s rooms aren&apos;t available right now.
           </div>
         )}
@@ -270,13 +270,13 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
                   label: "Archive / delete",
                   content: (
                     <>
-                      <section className="space-y-2 rounded-lg border p-3">
+                      <section className="space-y-2 rounded-2xl border p-3 bg-card">
                         <h3 className="text-sm font-semibold">{project.archived ? "Restore" : "Archive"}</h3>
                         <p className="text-muted-foreground text-xs">Archiving keeps rooms, history and the ledger, and frees a slot on your plan.</p>
                         <ArchiveButton projectId={project.id} archived={project.archived} redirectTo={project.archived ? undefined : "/app"} />
                       </section>
-                      <section className="space-y-2 rounded-lg border border-red-200 p-3">
-                        <h3 className="text-sm font-semibold text-red-700">Delete project</h3>
+                      <section className="space-y-2 rounded-2xl border border-red-500/40 p-3">
+                        <h3 className="text-sm font-semibold text-red-300">Delete project</h3>
                         <DeleteProject projectId={project.id} clientName={project.client_name} approvals={approvals} />
                       </section>
                     </>

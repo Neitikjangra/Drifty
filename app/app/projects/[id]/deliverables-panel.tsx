@@ -10,6 +10,8 @@ import { apiJson } from "@/lib/client-fetch";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 import { ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/deliverables/rules";
 import { PreflightButton, PreflightPanel, usePreflight } from "./preflight";
+import { Layers, Plus } from "lucide-react";
+import { IconBadge } from "@/components/ui/icon-badge";
 
 export interface DeliverableRow {
   id: string;
@@ -38,9 +40,9 @@ const LABEL: Record<DeliverableRow["status"], string> = {
 };
 const TONE: Record<DeliverableRow["status"], string> = {
   draft: "bg-air-force-blue-900 text-air-force-blue-200",
-  in_review: "bg-amber-100 text-amber-900",
-  changes_requested: "bg-orange-100 text-orange-900",
-  approved: "bg-green-100 text-green-900",
+  in_review: "bg-amber-400/15 text-amber-200",
+  changes_requested: "bg-orange-400/15 text-orange-200",
+  approved: "bg-lime-400/15 text-lime-200",
 };
 
 /** Uploads straight to Supabase Storage through a one-time signed slot; returns the storage path. */
@@ -86,11 +88,15 @@ export function DeliverablesPanel(props: {
 }) {
   const [showNew, setShowNew] = useState(props.items.length === 0);
   return (
-    <section className="space-y-3 rounded-lg border p-4">
+    <section className="space-y-3 rounded-2xl border p-4 bg-card">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Deliverables</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <IconBadge icon={Layers} size="sm" />
+          Deliverables
+        </h2>
         {props.canCreate && !showNew && (
-          <Button size="sm" variant="outline" onClick={() => setShowNew(true)}>
+          <Button size="sm" onClick={() => setShowNew(true)}>
+            <Plus className="size-3.5" aria-hidden />
             New deliverable
           </Button>
         )}
@@ -166,7 +172,7 @@ function NewDeliverableForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={submit} className="bg-muted/40 space-y-3 rounded-md border p-3" noValidate>
+    <form ref={formRef} onSubmit={submit} className="bg-muted/40 space-y-3 rounded-xl border p-3" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="d-title">Title</Label>
         <Input id="d-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Diwali post 1" />
@@ -190,7 +196,7 @@ function NewDeliverableForm({
           }}
           maxLength={5000}
           rows={3}
-          className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+          className="border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="Light up your Diwali with 20% off…"
         />
       </div>
@@ -205,7 +211,7 @@ function NewDeliverableForm({
           }}
           maxLength={2000}
           rows={2}
-          className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+          className="border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="Diwali offer post for Instagram, 20% off, festive but on-brand…"
         />
         <p className="text-muted-foreground text-xs">Team only. The pre-flight check compares the draft with it.</p>
@@ -218,7 +224,7 @@ function NewDeliverableForm({
         <p className="text-xs text-beige-100">No approver yet: the client can see the card, but nobody can approve it.</p>
       )}
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
@@ -373,7 +379,7 @@ function DeliverableItem({
   }
 
   return (
-    <li className="space-y-2 rounded-md border p-3 text-sm">
+    <li className="bg-muted/30 hover:border-primary/30 space-y-2 rounded-xl border p-3 text-sm transition-colors">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-medium">{item.title}</p>
@@ -399,7 +405,7 @@ function DeliverableItem({
             {summary.busy ? "Summarising… (up to 15 s)" : "Summarise feedback"}
           </Button>
           {summary.text && (
-            <p className={`text-xs ${summary.error ? "text-red-600" : "text-ash-grey-200"}`} role={summary.error ? "alert" : "status"}>
+            <p className={`text-xs ${summary.error ? "text-red-400" : "text-ash-grey-200"}`} role={summary.error ? "alert" : "status"}>
               {summary.text}
             </p>
           )}
@@ -411,7 +417,7 @@ function DeliverableItem({
         </Button>
       )}
       {open && (
-        <form onSubmit={submit} className="bg-muted/40 space-y-3 rounded-md border p-3" noValidate>
+        <form onSubmit={submit} className="bg-muted/40 space-y-3 rounded-xl border p-3" noValidate>
           <FilePicker
             id={`v-file-${item.id}`}
             file={file}
@@ -431,12 +437,12 @@ function DeliverableItem({
               }}
               maxLength={5000}
               rows={3}
-              className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+              className="border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2"
             />
           </div>
           <PreflightPanel busy={pf.busy} result={pf.result} error={pf.error} />
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {error}
             </p>
           )}
@@ -499,7 +505,7 @@ function DriftStatus({
         </div>
       )}
       {decision.error && (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="text-xs text-red-400" role="alert">
           {decision.error}
         </p>
       )}

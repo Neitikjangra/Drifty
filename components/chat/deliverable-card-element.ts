@@ -99,8 +99,8 @@ img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f5f9e
 .copy{font-size:13px;color:#24343a;line-height:1.4;white-space:pre-wrap}
 .chip{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap;transition:background .2s}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:8px;padding:9px 10px;background:#124559;color:#fcfdf9;min-height:20px}
-button.secondary{background:#fcfdf9;color:#01161e;border:1px solid #aec3b0}
+button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;font-size:14px;font-weight:600;border-radius:999px;padding:9px 10px;background:#c8f135;color:#0b0c0e;min-height:20px}
+button.secondary{background:#ffffff;color:#0b0c0e;border:1px solid #d5d9d2}
 button[disabled]{opacity:.55;cursor:default}
 textarea{box-sizing:border-box;width:100%;min-height:64px;border:1px solid #aec3b0;border-radius:8px;padding:8px;font:inherit;font-size:14px;resize:vertical}
 .err{font-size:12px;color:#b91c1c}

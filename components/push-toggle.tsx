@@ -109,7 +109,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
         </button>
       )}
       {error && (
-        <span className="text-xs text-red-600" role="alert">
+        <span className="text-xs text-red-400" role="alert">
           {error}
         </span>
       )}

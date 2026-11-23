@@ -75,7 +75,7 @@ export function JoinForm(props: {
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {props.returningName}</h1>
         {error ? (
           <>
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {error}
             </p>
             {error.includes(AGENCY_SESSION) ? (
@@ -109,7 +109,7 @@ export function JoinForm(props: {
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} autoComplete="name" className="h-11 text-base" />
       </div>
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

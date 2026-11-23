@@ -10,7 +10,7 @@ export const VOICE_EVENT = "drifty:voice";
 const MIC_ICON =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#124559" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0b0c0e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
   );
 import {
   CARD_TAG,
@@ -287,6 +287,15 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   // - emoji reactions on messages (desktop and H5 layouts)
   app.setCommandSwitch(ChatUICommand.SHOW_MESSAGE_STATE, false);
   app.setCommandSwitch(ChatUICommand.MESSAGE_REACTION_ENABLED, true);
+  // Brand bubbles (docs chatui-web/chat-ui/message-bubble, before ready()): own messages in
+  // Drifty lime with near-black text, others in a soft grey.
+  const bubbles = app.cloneMessageBubbleConfig();
+  bubbles.redius = 18;
+  bubbles.backgroundColorForMyself = 0xc8f135;
+  bubbles.textColorForMyself = 0x0b0c0e;
+  bubbles.backgroundColorForOthers = 0xf1f3ef;
+  bubbles.textColorForOthers = 0x0b0c0e;
+  app.setMessageBubbleConfig(bubbles);
   app.ready();
 
   // Live card status: server-written metadata → window event → card elements.

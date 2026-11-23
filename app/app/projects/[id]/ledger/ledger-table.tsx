@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { filterLedger, filterQuery, istTime, type LedgerFilter, type LedgerRow } from "@/lib/ledger/rules";
 
-const selectCls = "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
+const selectCls = "border-input bg-muted/60 h-9 w-full rounded-xl border px-2 text-sm";
 
 /** Ledger table with filters (FR-13). The CSV link carries the same filters. */
 export function LedgerTable({ projectId, rows }: { projectId: string; rows: LedgerRow[] }) {
@@ -19,7 +19,7 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
 
   if (rows.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-lg border p-6 text-center text-sm">
+      <div className="text-muted-foreground rounded-2xl border p-6 text-center text-sm bg-card">
         No approvals yet. When the client&apos;s approver taps <span className="font-medium">Approve</span> on a card, it&apos;s recorded here.
       </div>
     );
@@ -27,7 +27,7 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 rounded-2xl border p-3 sm:grid-cols-3 lg:grid-cols-6 bg-card">
         <div className="col-span-2 space-y-1 sm:col-span-3 lg:col-span-2">
           <Label htmlFor="l-q">Search</Label>
           <Input id="l-q" value={f.q ?? ""} onChange={(e) => set("q", e.target.value)} placeholder="Copy, deliverable or approver" maxLength={100} />
@@ -79,13 +79,13 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
       </div>
 
       {shown.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border p-6 text-center text-sm">No approvals match these filters.</p>
+        <p className="text-muted-foreground rounded-2xl border p-6 text-center text-sm bg-card">No approvals match these filters.</p>
       ) : (
         <>
           {/* Phones: cards */}
           <ul className="space-y-2 md:hidden">
             {shown.map((r) => (
-              <li key={r.approvalId} className="space-y-1 rounded-lg border p-3 text-sm">
+              <li key={r.approvalId} className="space-y-1 rounded-2xl border p-3 text-sm bg-card">
                 <div className="flex justify-between gap-2">
                   <span className="font-medium">
                     {r.deliverable} · v{r.version}
@@ -103,7 +103,7 @@ export function LedgerTable({ projectId, rows }: { projectId: string; rows: Ledg
             ))}
           </ul>
           {/* Desktop: table */}
-          <div className="hidden overflow-x-auto rounded-lg border md:block">
+          <div className="hidden overflow-x-auto rounded-2xl border md:block bg-card">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50 text-xs">
                 <tr>

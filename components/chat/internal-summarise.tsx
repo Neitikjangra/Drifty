@@ -38,7 +38,7 @@ export function InternalSummariseBar({ projectId, clientChannelId, items }: { pr
   }
 
   return (
-    <div className="bg-secondary flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm">
+    <div className="bg-secondary flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-sm">
       <span className="font-medium">Summarise client feedback:</span>
       {items.map((d) => (
         <Button key={d.id} size="sm" onClick={() => void run(d)} disabled={busy !== null}>
@@ -46,7 +46,7 @@ export function InternalSummariseBar({ projectId, clientChannelId, items }: { pr
         </Button>
       ))}
       {note && (
-        <span className={`w-full text-xs ${note.tone === "error" ? "text-red-600" : note.tone === "info" ? "text-air-force-blue-300" : "text-ash-grey-200"}`} role="status">
+        <span className={`w-full text-xs ${note.tone === "error" ? "text-red-400" : note.tone === "info" ? "text-air-force-blue-300" : "text-ash-grey-200"}`} role="status">
           {note.text}
         </span>
       )}

@@ -21,7 +21,7 @@ export default function ReportPage({ params, searchParams }: PageProps<"/app/pro
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
-    <div className="bg-muted/40 rounded-md border p-3 print:border-slate-300">
+    <div className="bg-muted/40 rounded-xl border p-3 print:border-slate-300">
       <p className="text-muted-foreground text-xs">{label}</p>
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
       {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
@@ -75,7 +75,7 @@ async function Report({
       <ReportActions projectId={access.project.id} month={month} canShare={canManageProjects(access.role)} hasData={hasData} />
 
       {!hasData ? (
-        <p className="text-muted-foreground rounded-lg border p-6 text-center text-sm">
+        <p className="text-muted-foreground rounded-2xl border p-6 text-center text-sm bg-card">
           Nothing happened in this project in {monthLabel(month)}. Pick another month above.
         </p>
       ) : (
@@ -93,7 +93,7 @@ async function Report({
           {r.lines.length > 0 && (
             <section>
               <h2 className="mb-2 font-semibold">Approved this month</h2>
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-2xl border bg-card">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-muted/50 text-xs">
                     <tr>

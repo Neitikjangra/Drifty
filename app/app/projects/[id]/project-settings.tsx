@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2 } from "lucide-react";
+import { LayoutDashboard, Settings2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export function SettingsButtons({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" onClick={() => openProjectSettings("overview")}>
+        <LayoutDashboard className="size-4" aria-hidden />
         Overview
       </Button>
       <Button variant="outline" size="sm" onClick={() => openProjectSettings(canManage ? "people" : "brand")} aria-label="Project settings">
@@ -58,14 +59,14 @@ export function ProjectSettings({ title, tabs }: { title: string; tabs: { id: Se
   return (
     <Sheet open={open} onClose={() => setOpen(false)} title={title} width="sm:max-w-lg">
       <div className="space-y-4">
-        <div role="tablist" aria-label="Settings sections" className="bg-muted/50 flex flex-wrap gap-1 rounded-md p-1">
+        <div role="tablist" aria-label="Settings sections" className="bg-muted/50 flex flex-wrap gap-1 rounded-2xl border p-1">
           {tabs.map((t) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={t.id === current?.id}
               onClick={() => setTab(t.id)}
-              className={`rounded px-2.5 py-1 text-sm ${t.id === current?.id ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              className={`rounded-full px-3 py-1 text-sm transition-colors ${t.id === current?.id ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
             >
               {t.label}
             </button>
@@ -79,7 +80,7 @@ export function ProjectSettings({ title, tabs }: { title: string; tabs: { id: Se
   );
 }
 
-const AREA = "border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2";
+const AREA = "border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2";
 
 /** What's agreed with the client; read by the team (and the scope alert's context). */
 export function ScopePanel({ projectId, scope, canEdit }: { projectId: string; scope: string; canEdit: boolean }) {
@@ -97,7 +98,7 @@ export function ScopePanel({ projectId, scope, canEdit }: { projectId: string; s
     }
   }
   return (
-    <section className="space-y-2 rounded-lg border p-3" aria-label="Scope">
+    <section className="space-y-2 rounded-2xl border p-3 bg-card" aria-label="Scope">
       <h3 className="text-sm font-semibold">Scope</h3>
       {canEdit ? (
         <>
@@ -106,7 +107,7 @@ export function ScopePanel({ projectId, scope, canEdit }: { projectId: string; s
             <Button size="sm" onClick={() => void save()} disabled={state.busy || text === scope}>
               {state.busy ? "Saving…" : "Save scope"}
             </Button>
-            {state.msg && <span className={`text-xs ${state.error ? "text-red-600" : "text-green-800"}`}>{state.msg}</span>}
+            {state.msg && <span className={`text-xs ${state.error ? "text-red-400" : "text-lime-300"}`}>{state.msg}</span>}
           </div>
         </>
       ) : (
@@ -146,7 +147,7 @@ export function ProjectTeamPanel({
     }
   }
   return (
-    <section className="space-y-3 rounded-lg border p-3" aria-label="Project team">
+    <section className="space-y-3 rounded-2xl border p-3 bg-card" aria-label="Project team">
       <h3 className="text-sm font-semibold">Team on this project</h3>
       <ul className="space-y-1 text-sm">
         {managers.map((m) => (
@@ -181,7 +182,7 @@ export function ProjectTeamPanel({
           <Button size="sm" onClick={() => void save()} disabled={state.busy || !changed}>
             {state.busy ? "Saving…" : "Save team"}
           </Button>
-          {state.msg && <span className={`text-xs ${state.error ? "text-red-600" : "text-green-800"}`}>{state.msg}</span>}
+          {state.msg && <span className={`text-xs ${state.error ? "text-red-400" : "text-lime-300"}`}>{state.msg}</span>}
         </div>
       )}
     </section>
@@ -221,7 +222,7 @@ export function DeleteProject({ projectId, clientName, approvals }: { projectId:
         <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-1" aria-label="Type the client's name to confirm" />
       </label>
       {state.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {state.error}
         </p>
       )}

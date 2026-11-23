@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet } from "@/components/ui/sheet";
 import { apiJson } from "@/lib/client-fetch";
 
-const AREA = "border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2";
+const AREA = "border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2";
 
 export interface Teammate {
   userId: string;
@@ -82,7 +82,7 @@ function ProjectForm({ creatives, onCancel }: { creatives: Teammate[]; onCancel:
     return (
       <div className="space-y-4" role="status">
         <p className="font-medium">{clientName} is ready.</p>
-        <div className="bg-muted/40 space-y-2 rounded-md border p-3 text-sm">
+        <div className="bg-muted/40 space-y-2 rounded-xl border p-3 text-sm">
           <p>
             Send {contactName.trim()} their personal link. They open it on their phone, with no app or password, and they&apos;re the approver.
           </p>
@@ -187,7 +187,7 @@ function ProjectForm({ creatives, onCancel }: { creatives: Teammate[]; onCancel:
       </details>
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

@@ -28,7 +28,7 @@ export function ReportActions({ projectId, month, canShare, hasData }: { project
         </Button>
       )}
       {state.text && (
-        <span className={`text-sm ${state.error ? "text-red-600" : "text-green-800"}`} role="status">
+        <span className={`text-sm ${state.error ? "text-red-400" : "text-lime-300"}`} role="status">
           {state.text}
         </span>
       )}

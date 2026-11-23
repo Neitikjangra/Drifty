@@ -11,7 +11,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const MIN_PASSWORD = 8;
 
 const inputCls =
-  "border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 text-base outline-none focus-visible:ring-2 sm:text-sm";
+  "border-input bg-muted/60 focus-visible:ring-ring h-10 w-full rounded-xl border px-3 text-base outline-none focus-visible:ring-2 sm:text-sm";
 
 type Mode = "signin" | "signup" | "code" | "forgot";
 
@@ -127,7 +127,7 @@ export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolea
   }[mode];
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm rounded-2xl border shadow-[0_0_60px_-20px_rgb(200_241_53/0.35)]">
       <CardHeader>
         <CardTitle className="text-xl">{title}</CardTitle>
         <CardDescription>{desc}</CardDescription>
@@ -135,7 +135,7 @@ export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolea
       <CardContent className="space-y-4">
         {(mode === "signin" || mode === "signup") && (
           <>
-            <div className="bg-muted grid grid-cols-2 rounded-md p-1 text-sm" role="tablist">
+            <div className="bg-muted grid grid-cols-2 rounded-full border p-1 text-sm" role="tablist">
               {(["signin", "signup"] as const).map((m) => (
                 <button
                   key={m}
@@ -143,7 +143,7 @@ export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolea
                   role="tab"
                   aria-selected={mode === m}
                   onClick={() => switchTo(m)}
-                  className={`rounded px-3 py-1.5 font-medium ${mode === m ? "bg-background shadow-sm" : "text-muted-foreground"}`}
+                  className={`rounded-full px-3 py-1.5 font-medium transition-colors ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {m === "signin" ? "Sign in" : "Create account"}
                 </button>
@@ -188,7 +188,7 @@ export function LoginForm({ emailEnabled, supportEmail }: { emailEnabled: boolea
                 {mode === "signup" && <p className="text-muted-foreground text-xs">At least {MIN_PASSWORD} characters.</p>}
               </div>
               {error && (
-                <p className="text-sm text-red-600" role="alert">
+                <p className="text-sm text-red-400" role="alert">
                   {error}
                 </p>
               )}
@@ -309,7 +309,7 @@ function CodeFlow({ email, setEmail, next, onBack }: { email: string; setEmail: 
           </div>
         )}
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-red-400" role="alert">
             {error}
           </p>
         )}
@@ -363,7 +363,7 @@ function ForgotFlow({ email, setEmail, onBack }: { email: string; setEmail: (v: 
             <input id="forgot-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@agency.com" className={inputCls} />
           </div>
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {error}
             </p>
           )}

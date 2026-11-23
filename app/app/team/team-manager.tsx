@@ -69,14 +69,14 @@ export function TeamManager({
   return (
     <div className="space-y-5">
       {canInvite && (
-        <section className="space-y-3 rounded-lg border p-4" aria-label="Invite a teammate">
+        <section className="space-y-3 rounded-2xl border p-4 bg-card" aria-label="Invite a teammate">
           <h2 className="font-semibold">Invite a teammate</h2>
           <div className="flex flex-wrap items-center gap-2">
             <select
               aria-label="Role"
               value={role}
               onChange={(e) => setRole(e.target.value as TeamRole)}
-              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+              className="border-input bg-muted/60 h-9 rounded-xl border px-3 text-sm"
             >
               <option value="creative">Creative</option>
               {isOwner && <option value="am">Account manager</option>}
@@ -86,7 +86,7 @@ export function TeamManager({
             </Button>
           </div>
           {link && (
-            <div className="bg-muted/40 space-y-2 rounded-md border p-3 text-sm" role="status">
+            <div className="bg-muted/40 space-y-2 rounded-xl border p-3 text-sm" role="status">
               <p>{link.copied ? "Link copied. Send it to your teammate (works once, for 7 days):" : "Copy this link and send it to your teammate (works once, for 7 days):"}</p>
               <p className="font-mono text-xs break-all select-all">{link.url}</p>
               <div className="flex gap-2">
@@ -121,7 +121,7 @@ export function TeamManager({
         </section>
       )}
 
-      <section className="rounded-lg border" aria-label="Team members">
+      <section className="rounded-2xl border bg-card" aria-label="Team members">
         <h2 className="border-b p-3 font-semibold">Members ({members.length})</h2>
         <ul className="divide-y">
           {members.map((m) => (
@@ -156,7 +156,7 @@ export function TeamManager({
       </section>
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

@@ -1,5 +1,17 @@
 # Changelog
 
+## New look: dark theme with a lime accent (2026-11-23)
+
+- Dark-first theme: near-black surfaces, soft white text, one neon-lime accent (#c8f135).
+  Contrast passes WCAG AA; printing (Save as PDF) switches to dark ink on white.
+- Pill buttons with a soft lime glow, rounded cards, lime line icons in round badges (Lucide),
+  Plus Jakarta Sans as the UI font, sticky blurred headers with pill navigation.
+- Landing page rebuilt in this style (hero glow, icon feature cards, steps, pricing, FAQ).
+- App: icon navigation (Projects, Team, Help), project cards with icons, lime room switcher and
+  settings tabs, restyled time-saved card, login and client room header.
+- Chat: own messages in lime bubbles through ChatUI's documented bubble config; cards in the
+  chat use lime pill buttons. ChatUI's own shell stays light (it has no documented dark theme).
+
 ## Cleaner projects, team, delete, session fix (2026-11-23)
 
 - **New project** is a button that opens a compact form: client, scope (what's included and

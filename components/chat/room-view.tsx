@@ -12,7 +12,7 @@ function LinkBar({ state }: { state: LinkState }) {
   if (state === "connected") return null;
   if (state === "kicked") {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-md bg-beige-500 px-3 py-1.5 text-xs text-beige-100" role="status">
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-lime-400/20 bg-beige-500 px-3 py-1.5 text-xs text-beige-100" role="status">
         <span>This room is open on another device or tab, so new messages go there.</span>
         <button
           className="shrink-0 font-semibold underline underline-offset-2"
@@ -25,7 +25,7 @@ function LinkBar({ state }: { state: LinkState }) {
   }
   const text = state === "offline" ? "You're offline. Messages will arrive when you're back online." : state === "connecting" ? "Connecting…" : "Reconnecting…";
   return (
-    <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md px-3 py-1.5 text-xs" role="status" aria-live="polite">
+    <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs" role="status" aria-live="polite">
       <span className="inline-block size-2 animate-pulse rounded-full bg-beige-200" aria-hidden />
       {text}
     </div>
@@ -159,6 +159,7 @@ export function RoomView({
     <div className={cn("flex min-h-0 min-w-0 flex-col gap-2", className)}>
       {rooms.length > 1 && (
         <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Rooms">
+          <div className="bg-card flex items-center gap-0.5 rounded-full border p-1">
           {rooms.map((r) => (
             <button
               key={r.channelId}
@@ -167,13 +168,14 @@ export function RoomView({
               onClick={() => void switchTo(r.channelId)}
               disabled={phase.kind !== "ready"}
               className={cn(
-                "rounded-full border px-3 py-1 text-sm font-medium transition-colors disabled:opacity-50",
-                r.channelId === activeId ? "bg-foreground text-background border-foreground" : "hover:bg-muted",
+                "rounded-full px-3.5 py-1 text-sm font-medium transition-colors disabled:opacity-50",
+                r.channelId === activeId ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
             >
               {r.label}
             </button>
           ))}
+          </div>
           {active?.hint && <span className="text-muted-foreground text-xs">{active.hint}</span>}
         </div>
       )}
@@ -182,12 +184,12 @@ export function RoomView({
       {internalBar && active?.label === "Internal" && internalBar}
 
       {phase.kind === "loading" && (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border text-sm" role="status">
+        <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-2xl border text-sm bg-card" role="status">
           Opening the room…
         </div>
       )}
       {phase.kind === "error" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border p-6 text-center" role="alert">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center bg-card" role="alert">
           <p className="text-sm">{phase.message}</p>
           <Button
             size="sm"
@@ -202,7 +204,7 @@ export function RoomView({
       )}
       <div
         ref={containerRef}
-        className={cn("min-h-0 flex-1 overflow-hidden rounded-lg border", phase.kind !== "ready" && "hidden")}
+        className={cn("min-h-0 flex-1 overflow-hidden rounded-2xl border bg-card", phase.kind !== "ready" && "hidden")}
       />
       {projectId && <VoiceRecorder projectId={projectId} eventName="drifty:voice" />}
     </div>

@@ -116,7 +116,7 @@ export function DemoGuide({ projectId, progress }: { projectId: string; progress
   const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <details open={doneCount < steps.length} className="rounded-lg border border-beige-400 bg-beige-500 p-3 text-sm dark:bg-dark-teal-300/40">
+    <details open={doneCount < steps.length} className="rounded-2xl border border-beige-400 bg-beige-500 p-3 text-sm dark:bg-dark-teal-300/40">
       <summary className="cursor-pointer font-medium">
         Demo guide · {doneCount} of {steps.length} done
       </summary>

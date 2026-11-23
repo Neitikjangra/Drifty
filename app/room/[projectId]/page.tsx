@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { RoomView } from "@/components/chat/room-view";
@@ -40,9 +41,14 @@ async function GuestRoom({ params }: { params: PageProps<"/room/[projectId]">["p
   return (
     <main className="flex h-dvh flex-col gap-2 p-2 sm:p-4">
       <header className="flex items-center justify-between gap-2 px-1">
-        <h1 className="truncate text-base font-semibold">{access.project.client_name}</h1>
+        <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
+          <Image src="/brand/drifty-mark.png" alt="" width={24} height={24} className="rounded-md" />
+          <span className="truncate">{access.project.client_name}</span>
+        </h1>
         <div className="flex shrink-0 items-center gap-3">
-          {access.role === "approver" && <span className="text-muted-foreground text-xs">You&apos;re the approver</span>}
+          {access.role === "approver" && (
+            <span className="text-primary rounded-full border border-lime-400/30 bg-lime-400/10 px-2.5 py-0.5 text-xs font-medium">You&apos;re the approver</span>
+          )}
           <PushToggle compact />
         </div>
       </header>

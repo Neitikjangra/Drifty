@@ -22,7 +22,7 @@ export function ClientLinkBox() {
     router.push(`/join/${token}`);
   }
   return (
-    <form onSubmit={open} className="space-y-2 rounded-lg border p-4" noValidate>
+    <form onSubmit={open} className="space-y-2 rounded-2xl border p-4 bg-card" noValidate>
       <Label htmlFor="invite-link" className="font-medium">
         Are you a client?
       </Label>
@@ -34,7 +34,7 @@ export function ClientLinkBox() {
         </Button>
       </div>
       {error && (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="text-xs text-red-400" role="alert">
           {error}
         </p>
       )}

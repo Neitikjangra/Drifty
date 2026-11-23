@@ -28,7 +28,7 @@ export function BrandRulesPanel({ projectId, rules, memoryCount, canEdit }: { pr
   }
 
   return (
-    <section className="space-y-2 rounded-lg border p-3" aria-label="Brand rules and client taste">
+    <section className="space-y-2 rounded-2xl border p-3 bg-card" aria-label="Brand rules and client taste">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Brand rules &amp; taste</h2>
         {canEdit && !editing && (
@@ -45,11 +45,11 @@ export function BrandRulesPanel({ projectId, rules, memoryCount, canEdit }: { pr
             onChange={(e) => setText(e.target.value)}
             maxLength={4000}
             rows={5}
-            className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+            className="border-input bg-muted/60 focus-visible:ring-ring w-full rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2"
             placeholder={"Logo always top-left, at least 15% of the width\nBrand colours: deep green and cream only\nNever use the word 'cheap'\nPrices in ₹ with no decimals"}
           />
           {state.error && (
-            <p className="text-xs text-red-600" role="alert">
+            <p className="text-xs text-red-400" role="alert">
               {state.error}
             </p>
           )}

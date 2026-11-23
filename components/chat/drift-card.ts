@@ -54,7 +54,7 @@ export function defineDriftElement(): CustomElementConstructor {
       link.target = "_blank";
       link.rel = "noopener";
       link.textContent = `Open v${card.toVersion} ↗`;
-      link.style.cssText = "font-size:13px;color:#20799c;font-weight:600";
+      link.style.cssText = "font-size:13px;color:#4d6b00;font-weight:600";
       link.addEventListener("click", (e) => e.stopPropagation());
       body.append(link);
       for (const r of card.results) {

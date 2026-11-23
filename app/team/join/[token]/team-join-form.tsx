@@ -32,7 +32,7 @@ export function TeamJoinForm({ token, suggestedName }: { token: string; suggeste
         <Input id="team-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} autoComplete="name" className="h-11 text-base" />
       </div>
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

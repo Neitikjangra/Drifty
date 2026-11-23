@@ -121,7 +121,7 @@ export function PeoplePanel(props: { projectId: string; projectName: string; can
     ) : null;
 
   return (
-    <aside className="w-full space-y-5 rounded-lg border p-4">
+    <aside className="w-full space-y-5 rounded-2xl border p-4 bg-card">
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Client people</h2>
         {props.members.length === 0 ? (
@@ -235,7 +235,7 @@ export function PeoplePanel(props: { projectId: string; projectName: string; can
       )}
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
@@ -309,7 +309,7 @@ function InviteForm({ projectId, hasApprover }: { projectId: string; hasApprover
           </p>
         </fieldset>
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-red-400" role="alert">
             {error}
           </p>
         )}
