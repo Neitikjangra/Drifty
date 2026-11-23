@@ -460,7 +460,8 @@ export async function readRoomHistory(channelId: string, max = 200): Promise<His
  * right-side bubbles were pushed out of view. `setChannelBarSwitch(false)` is documented but
  * didn't hide the duplicate channel list in this version. We add one small stylesheet inside
  * ChatUI's open shadow roots: hide the list (our page has its own room tabs) and let the message
- * area shrink to the column. Selectors only touch ChatUI's layout classes, never messages.
+ * area shrink to the column. Selectors only touch ChatUI's layout classes, never messages; the
+ * input gets dark text (our page is dark-themed) and a lime Send button (ChatUI has no theme API).
  */
 const FIT_CSS = `
 .nc-chatui-app-wrapper-left{display:none!important}
@@ -468,6 +469,11 @@ const FIT_CSS = `
 .nc-chatui-app-inner{min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
 .nc-chatui-msg-bubble-wrapper{max-width:min(78%,560px)!important}
 .nc-chatui-msg-bubble p{overflow-wrap:anywhere;word-break:break-word}
+.textarea{color:#0b0c0e!important;caret-color:#0b0c0e;font-family:var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif!important}
+.textarea::placeholder{color:#6b7280}
+.nc-input-send-button:not(.disabled){background-color:#c8f135!important;color:#0b0c0e!important;font-weight:600}
+.nc-input-send-button:hover:not(.disabled){background-color:#b5dc2a!important}
+.nc-input-send-button:not(.disabled) img{filter:brightness(0)}
 `;
 
 function fitChatUI(container: HTMLElement): () => void {

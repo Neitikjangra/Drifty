@@ -204,7 +204,7 @@ export function RoomView({
       )}
       <div
         ref={containerRef}
-        className={cn("min-h-0 flex-1 overflow-hidden rounded-2xl border bg-card", phase.kind !== "ready" && "hidden")}
+        className={cn("min-h-0 flex-1 overflow-hidden rounded-2xl border bg-card text-[#0b0c0e] [color-scheme:light]", phase.kind !== "ready" && "hidden")}
       />
       {projectId && <VoiceRecorder projectId={projectId} eventName="drifty:voice" />}
     </div>
