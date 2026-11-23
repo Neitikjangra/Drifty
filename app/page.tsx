@@ -10,12 +10,12 @@ import {
   MessagesSquare,
   Mic,
   ShieldCheck,
-  Sparkles,
   Timer,
   type LucideIcon,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Eyebrow, IconBadge } from "@/components/ui/icon-badge";
+import { Eyebrow, HeroBadge, IconBadge } from "@/components/ui/icon-badge";
+import { DriftGlyph } from "@/components/brand/drift-glyph";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { SupportEmail } from "@/components/marketing/support";
 
@@ -120,9 +120,9 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div className="lux-beams pointer-events-none absolute inset-0" aria-hidden />
           <div className="lux-rise relative mx-auto w-full max-w-5xl px-4 pt-16 pb-14 text-center sm:pt-24">
-            <Eyebrow>
-              <Sparkles className="mr-1.5 size-3.5" aria-hidden /> For agencies and freelancers
-            </Eyebrow>
+            <HeroBadge glyph={<DriftGlyph className="size-4" />} note="built for India">
+              For agencies and freelancers
+            </HeroBadge>
             <h1 className="mx-auto mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
               Stop chasing client feedback on <span className="accent-serif text-sheen pr-1 text-[1.12em]">WhatsApp.</span>
             </h1>
