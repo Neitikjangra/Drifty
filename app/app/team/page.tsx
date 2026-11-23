@@ -31,14 +31,17 @@ async function Team() {
         <Link href="/app" className="text-muted-foreground text-sm hover:underline">
           ← Projects
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Your <span className="accent-serif text-sheen text-[1.15em]">team</span>
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Account managers see every project and both rooms. Creatives see only the projects you put them on, and only the internal room.
+          Give everyone a dedicated role. People who manage clients see every project and both rooms; people who make the work see only the
+          projects you put them on, and only the internal room.
         </p>
       </div>
       <TeamManager
-        members={members.map((m) => ({ userId: m.userId, role: m.role, name: m.name, email: m.email, you: m.userId === caller.userId }))}
-        invites={invites.map((i) => ({ id: i.id, role: i.role, expiresAt: i.expires_at }))}
+        members={members.map((m) => ({ userId: m.userId, role: m.role, title: m.title, name: m.name, email: m.email, you: m.userId === caller.userId }))}
+        invites={invites.map((i) => ({ id: i.id, role: i.role, title: i.title, expiresAt: i.expires_at }))}
         canInvite={canInvite}
         isOwner={caller.membership.role === "owner"}
       />

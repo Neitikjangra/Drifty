@@ -1,5 +1,6 @@
 "use client";
 
+import { MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,8 @@ export interface PeopleData {
 }
 
 /** WhatsApp green, readable white text (contrast ~4.6:1 with the darker shade). */
-const WA_CLASS = "bg-[#1f9d55] text-white hover:bg-[#178a49]";
+/** WhatsApp share: the brand lime pill with a chat icon. */
+const WA_CLASS = "gap-1.5";
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
@@ -143,6 +145,7 @@ export function PeoplePanel(props: { projectId: string; projectName: string; can
                     )}
                     {m.inviteId && m.linkActive && (
                       <Button size="sm" className={WA_CLASS} disabled={busy} onClick={() => void shareWhatsApp(m.inviteId!, m.name)}>
+                        <MessageCircle className="size-3.5" aria-hidden />
                         {busyKey === `wa-${m.inviteId}` ? "Opening…" : "Share on WhatsApp"}
                       </Button>
                     )}
@@ -197,6 +200,7 @@ export function PeoplePanel(props: { projectId: string; projectName: string; can
                     {busyKey === `copy-${i.inviteId}` ? "Copying…" : "Copy link again"}
                   </Button>
                   <Button size="sm" className={WA_CLASS} disabled={busy} onClick={() => void shareWhatsApp(i.inviteId, i.name)}>
+                    <MessageCircle className="size-3.5" aria-hidden />
                     {busyKey === `wa-${i.inviteId}` ? "Opening…" : "Share on WhatsApp"}
                   </Button>
                   <Button size="sm" variant="ghost" disabled={busy} onClick={() => revoke(i.inviteId, false)}>

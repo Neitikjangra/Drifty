@@ -12,6 +12,8 @@ const teamHash = (token: string) => hashInviteToken(signingSecret(), teamTokenTe
 export interface TeamMember {
   userId: string;
   role: "owner" | TeamRole;
+  /** Job role id (designer, copywriter...), '' when none was picked. */
+  title: string;
   name: string;
   email: string | null;
   nexconnId: string | null;
@@ -19,7 +21,7 @@ export interface TeamMember {
 
 export async function listTeam(workspaceId: string): Promise<TeamMember[]> {
   const db = supabaseAdmin();
-  const { data: members, error } = await db.from("members").select("user_id, role, created_at").eq("workspace_id", workspaceId).order("created_at");
+  const { data: members, error } = await db.from("members").select("user_id, role, title, created_at").eq("workspace_id", workspaceId).order("created_at");
   if (error) throw fail("listTeam", error.code);
   const ids = (members ?? []).map((m) => m.user_id as string);
   if (!ids.length) return [];
@@ -27,7 +29,7 @@ export async function listTeam(workspaceId: string): Promise<TeamMember[]> {
   const byId = new Map((profiles ?? []).map((p) => [p.user_id as string, p as { display_name: string; email: string | null; nexconn_user_id: string }]));
   return (members ?? []).map((m) => {
     const p = byId.get(m.user_id as string);
-    return { userId: m.user_id as string, role: m.role as TeamMember["role"], name: p?.display_name ?? "Teammate", email: p?.email ?? null, nexconnId: p?.nexconn_user_id ?? null };
+    return { userId: m.user_id as string, role: m.role as TeamMember["role"], title: (m.title as string) ?? "", name: p?.display_name ?? "Teammate", email: p?.email ?? null, nexconnId: p?.nexconn_user_id ?? null };
   });
 }
 
@@ -78,17 +80,18 @@ export async function setProjectTeam(project: Project, wantedUserIds: string[]):
 export interface TeamInviteRow {
   id: string;
   role: TeamRole;
+  title: string;
   created_at: string;
   expires_at: string;
   used_at: string | null;
   revoked_at: string | null;
 }
 
-export async function createTeamInvite(workspaceId: string, role: TeamRole, createdBy: string): Promise<{ id: string; token: string }> {
+export async function createTeamInvite(workspaceId: string, role: TeamRole, title: string, createdBy: string): Promise<{ id: string; token: string }> {
   const { token } = newInviteToken(signingSecret());
   const { data, error } = await supabaseAdmin()
     .from("team_invites")
-    .insert({ workspace_id: workspaceId, role, token_hash: teamHash(token), created_by: createdBy })
+    .insert({ workspace_id: workspaceId, role, title, token_hash: teamHash(token), created_by: createdBy })
     .select("id")
     .single();
   if (error || !data) throw fail("createTeamInvite", error?.code);
@@ -98,7 +101,7 @@ export async function createTeamInvite(workspaceId: string, role: TeamRole, crea
 export async function listTeamInvites(workspaceId: string): Promise<TeamInviteRow[]> {
   const { data, error } = await supabaseAdmin()
     .from("team_invites")
-    .select("id, role, created_at, expires_at, used_at, revoked_at")
+    .select("id, role, title, created_at, expires_at, used_at, revoked_at")
     .eq("workspace_id", workspaceId)
     .is("used_at", null)
     .is("revoked_at", null)
@@ -122,21 +125,21 @@ export async function revokeTeamInvite(workspaceId: string, id: string): Promise
 }
 
 export type ResolvedTeamInvite =
-  | { state: "ok"; id: string; role: TeamRole; workspaceId: string; workspaceName: string }
+  | { state: "ok"; id: string; role: TeamRole; title: string; workspaceId: string; workspaceName: string }
   | { state: Exclude<TeamInviteState, "ok"> | "invalid" };
 
 export async function resolveTeamInvite(token: string): Promise<ResolvedTeamInvite> {
   if (!isWellFormedInviteToken(token)) return { state: "invalid" };
   const { data } = await supabaseAdmin()
     .from("team_invites")
-    .select("id, role, workspace_id, expires_at, used_at, revoked_at, workspaces(name)")
+    .select("id, role, title, workspace_id, expires_at, used_at, revoked_at, workspaces(name)")
     .eq("token_hash", teamHash(token))
     .maybeSingle();
   if (!data) return { state: "invalid" };
   const row = data as unknown as TeamInviteRow & { workspace_id: string; workspaces: { name: string } | null };
   const state = teamInviteState(row);
   if (state !== "ok") return { state };
-  return { state: "ok", id: row.id, role: row.role, workspaceId: row.workspace_id, workspaceName: row.workspaces?.name ?? "your agency" };
+  return { state: "ok", id: row.id, role: row.role, title: row.title ?? "", workspaceId: row.workspace_id, workspaceName: row.workspaces?.name ?? "your agency" };
 }
 
 /** Claims the link once (atomic); false when someone else used it first. */
@@ -177,5 +180,29 @@ export async function removeTeammate(workspaceId: string, member: TeamMember): P
         if (ch) await removeFromRoom(ch, [member.nexconnId]).catch(() => {});
       }
     }
+  }
+}
+
+/**
+ * Changes a teammate's job role (and with it their access level), keeping rooms in step:
+ * becoming a manager joins every project's rooms; becoming a creative leaves client rooms and
+ * the internal rooms of projects they aren't on.
+ */
+export async function changeTeammateRole(workspaceId: string, member: TeamMember, access: TeamRole, title: string): Promise<void> {
+  const db = supabaseAdmin();
+  const { error } = await db.from("members").update({ role: access, title }).eq("workspace_id", workspaceId).eq("user_id", member.userId).neq("role", "owner");
+  if (error) throw fail("changeTeammateRole", error.code);
+  if (access === member.role || !member.nexconnId) return;
+  if (access === "am") {
+    await addManagerToRooms(workspaceId, member.nexconnId);
+    return;
+  }
+  const [{ data: projects }, onProjects] = await Promise.all([
+    db.from("projects").select("id, client_channel_id, internal_channel_id").eq("workspace_id", workspaceId),
+    projectIdsFor(member.userId),
+  ]);
+  for (const p of (projects ?? []) as { id: string; client_channel_id: string | null; internal_channel_id: string | null }[]) {
+    if (p.client_channel_id) await removeFromRoom(p.client_channel_id, [member.nexconnId]).catch(() => {});
+    if (p.internal_channel_id && !onProjects.has(p.id)) await removeFromRoom(p.internal_channel_id, [member.nexconnId]).catch(() => {});
   }
 }

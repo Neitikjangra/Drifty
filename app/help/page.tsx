@@ -74,7 +74,7 @@ async function WhatsAppSupport() {
   if (digits.length < 8) return null;
   const href = `https://wa.me/${digits}?text=${encodeURIComponent("Hi Drifty team, I need help with: ")}`;
   return (
-    <a href={href} target="_blank" rel="noopener" className={`${buttonVariants()} bg-[#1f9d55] text-white hover:bg-[#178a49]`}>
+    <a href={href} target="_blank" rel="noopener" className={buttonVariants()}>
       Chat with us on WhatsApp
     </a>
   );

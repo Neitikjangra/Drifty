@@ -27,7 +27,7 @@ import { DeleteProject, ProjectSettings, ProjectTeamPanel, ScopePanel, SettingsB
 import { listTeam, projectTeamIds } from "@/lib/team/server";
 import { approvalCount } from "@/lib/projects/delete";
 import { supabaseAdmin } from "@/lib/db/supabase-server";
-import { TEAM_ROLE_LABEL } from "@/lib/team/rules";
+import { roleLabel } from "@/lib/team/rules";
 import { driftCounts, sendLabel } from "@/lib/drift/rules";
 
 /** Groups invites by person: who's in the room, who hasn't joined, and dead links to re-issue. */
@@ -244,8 +244,8 @@ async function SidePanels({ project, canManage, canUpload }: { project: Project;
                 projectId={project.id}
                 canEdit={canManage}
                 onProject={onProject}
-                creatives={team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: m.name }))}
-                managers={team.filter((m) => m.role !== "creative").map((m) => ({ userId: m.userId, name: m.name, role: TEAM_ROLE_LABEL[m.role] }))}
+                creatives={team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: m.name, role: roleLabel(m.role, m.title) }))}
+                managers={team.filter((m) => m.role !== "creative").map((m) => ({ userId: m.userId, name: m.name, role: roleLabel(m.role, m.title) }))}
               />
             ),
           },

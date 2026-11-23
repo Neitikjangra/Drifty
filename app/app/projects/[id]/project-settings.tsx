@@ -127,7 +127,7 @@ export function ProjectTeamPanel({
   canEdit,
 }: {
   projectId: string;
-  creatives: { userId: string; name: string }[];
+  creatives: { userId: string; name: string; role: string }[];
   onProject: string[];
   managers: { userId: string; name: string; role: string }[];
   canEdit: boolean;
@@ -164,7 +164,7 @@ export function ProjectTeamPanel({
                 checked={picked.includes(c.userId)}
                 onChange={(e) => setPicked((p) => (e.target.checked ? [...p, c.userId] : p.filter((x) => x !== c.userId)))}
               />
-              {c.name} · Creative
+              {c.name} · {c.role}
             </label>
           </li>
         ))}

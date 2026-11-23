@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { getAgencyUser } from "@/lib/auth/session";
 import { getMembership, getProfile } from "@/lib/db/repo";
-import { TEAM_INVITE_MESSAGES, TEAM_ROLE_LABEL } from "@/lib/team/rules";
+import { roleLabel, TEAM_INVITE_MESSAGES } from "@/lib/team/rules";
 import { resolveTeamInvite } from "@/lib/team/server";
 import { TeamJoinForm } from "./team-join-form";
 
@@ -37,7 +37,7 @@ async function TeamJoin({ params }: { params: PageProps<"/team/join/[token]">["p
     <div className="space-y-1 text-center">
       <p className="text-muted-foreground text-sm">You&apos;re invited to join</p>
       <h1 className="text-2xl font-semibold tracking-tight">{inv.workspaceName}</h1>
-      <p className="text-muted-foreground text-sm">as {TEAM_ROLE_LABEL[inv.role].toLowerCase()} on Drifty</p>
+      <p className="text-muted-foreground text-sm">as {roleLabel(inv.role, inv.title).toLowerCase()} on Drifty</p>
     </div>
   );
   if (!user) {

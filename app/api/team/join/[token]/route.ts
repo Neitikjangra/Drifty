@@ -39,7 +39,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/team/join/[toke
     const nexconnId = nexconnUserId(user.id);
     await upsertProfile({ user_id: user.id, display_name: input.name, email: user.email, nexconn_user_id: nexconnId });
     await issueAccessToken(nexconnId, input.name);
-    const { error } = await supabaseAdmin().from("members").insert({ workspace_id: inv.workspaceId, user_id: user.id, role: inv.role });
+    const { error } = await supabaseAdmin().from("members").insert({ workspace_id: inv.workspaceId, user_id: user.id, role: inv.role, title: inv.title });
     if (error) throw new Error(`team join ${error.code ?? ""}`);
     if (inv.role === "am") await addManagerToRooms(inv.workspaceId, nexconnId);
     return ok({ joined: true }, 201);

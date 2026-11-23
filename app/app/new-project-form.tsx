@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -102,9 +102,9 @@ function ProjectForm({ creatives, onCancel }: { creatives: Teammate[]; onCancel:
             </Button>
             <Button
               size="sm"
-              variant="outline"
               onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Your ${clientName} room on Drifty: ${done.inviteLink}`)}`, "_blank", "noopener")}
             >
+              <MessageCircle className="size-3.5" aria-hidden />
               Share on WhatsApp
             </Button>
           </div>

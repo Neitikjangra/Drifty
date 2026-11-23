@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seesAllProjects, teamDiff, teamInviteState, teamTokenText } from "@/lib/team/rules";
+import { canGrant, JOB_ROLES, jobRole, roleLabel, seesAllProjects, teamDiff, teamInviteState, teamTokenText } from "@/lib/team/rules";
 
 describe("team", () => {
   const base = { expires_at: "2026-12-01T00:00:00Z", revoked_at: null, used_at: null };
@@ -21,5 +21,26 @@ describe("team", () => {
   });
   it("team tokens can't be confused with client invite tokens", () => {
     expect(teamTokenText("abc")).toBe("team:abc");
+  });
+});
+
+
+describe("job roles", () => {
+  it("every role maps to an access level", () => {
+    expect(JOB_ROLES.length).toBeGreaterThanOrEqual(10);
+    expect(jobRole("designer")?.access).toBe("creative");
+    expect(jobRole("project_manager")?.access).toBe("am");
+    expect(jobRole("nope")).toBeNull();
+  });
+  it("labels prefer the job role", () => {
+    expect(roleLabel("creative", "video_editor")).toBe("Video editor");
+    expect(roleLabel("am", "")).toBe("Account manager");
+    expect(roleLabel("owner", "designer")).toBe("Owner");
+  });
+  it("only the owner grants manager access", () => {
+    expect(canGrant("owner", "am")).toBe(true);
+    expect(canGrant("am", "am")).toBe(false);
+    expect(canGrant("am", "creative")).toBe(true);
+    expect(canGrant("creative", "creative")).toBe(false);
   });
 });

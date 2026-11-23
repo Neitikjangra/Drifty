@@ -5,15 +5,15 @@ import { getCaller } from "@/lib/access";
 import { Logo } from "@/components/brand/logo";
 import { PushToggle } from "@/components/push-toggle";
 
-const NAV = "text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors";
+const NAV = "text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors sm:px-3";
 
 export default function AppLayout({ children }: LayoutProps<"/app">) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-background/80 sticky top-0 z-30 border-b backdrop-blur print:hidden">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
           <Link href="/app" aria-label="Drifty projects">
-            <Logo />
+            <Logo compact />
           </Link>
           <Suspense fallback={null}>
             <AccountBar />

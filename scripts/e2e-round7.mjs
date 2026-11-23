@@ -86,7 +86,8 @@ check("projects page shows a New project button", home.status === 200 && /New pr
 check("no always-open project name field", !home.text.includes('id="clientName"'));
 
 // Team invite links
-const inv = await owner.req("/api/team/invites", { method: "POST", body: { role: "creative" } });
+check("invite needs a known role", (await owner.req("/api/team/invites", { method: "POST", body: { title: "wizard" } })).status === 400);
+const inv = await owner.req("/api/team/invites", { method: "POST", body: { title: "designer" } });
 check("owner creates a creative team link", inv.status === 201 && /\/team\/join\/[A-Za-z0-9_-]{43}$/.test(inv.json?.link ?? ""), `${inv.status} ${inv.text.slice(0, 120)}`);
 const tToken = (inv.json?.link ?? "").split("/team/join/")[1];
 const tPage = await stranger.req(`/team/join/${tToken}`);
@@ -100,13 +101,21 @@ await signIn(other, `e2e-r7-other-${stamp}@drifty.test`);
 check("team link works only once", (await other.req(`/api/team/join/${tToken}`, { method: "POST", body: { name: "Other" } })).status === 410);
 const { data: cProf } = await admin.from("profiles").select("user_id").eq("email", creativeEmail).single();
 const creativeId = cProf?.user_id;
-const { data: cMem } = await admin.from("members").select("role").eq("user_id", creativeId).single();
-check("teammate is a creative", cMem?.role === "creative", JSON.stringify(cMem));
-check("creative can't invite teammates", (await creative.req("/api/team/invites", { method: "POST", body: { role: "creative" } })).status === 403);
+const { data: cMem } = await admin.from("members").select("role, title").eq("user_id", creativeId).single();
+check("teammate joins as a Designer with creative access", cMem?.role === "creative" && cMem?.title === "designer", JSON.stringify(cMem));
+check("creative can't invite teammates", (await creative.req("/api/team/invites", { method: "POST", body: { title: "copywriter" } })).status === 403);
+check("creative can't change roles", (await creative.req(`/api/team/members/${creativeId}`, { method: "PATCH", body: { title: "account_manager" } })).status === 403);
+const pmInv = await owner.req("/api/team/invites", { method: "POST", body: { title: "project_manager" } });
+const { data: pmRow } = await admin.from("team_invites").select("role, title").eq("id", pmInv.json?.id).single();
+check("project manager link gives manager access", pmInv.status === 201 && pmRow?.role === "am" && pmRow?.title === "project_manager", JSON.stringify(pmRow));
+await owner.req(`/api/team/invites/${pmInv.json?.id}`, { method: "DELETE" });
 const badToken = await other.req(`/api/team/join/${"x".repeat(43)}`, { method: "POST", body: { name: "Other" } });
 check("made-up team link is refused", badToken.status === 404, `${badToken.status}`);
 const teamPage = await owner.req("/app/team");
-check("team page lists the creative", teamPage.status === 200 && teamPage.text.includes("R7 Creative"), `${teamPage.status}`);
+check("team page lists the creative with their role", teamPage.status === 200 && teamPage.text.includes("R7 Creative") && teamPage.text.includes("Designer"), `${teamPage.status}`);
+const toCopy = await owner.req(`/api/team/members/${creativeId}`, { method: "PATCH", body: { title: "copywriter" } });
+const { data: cw } = await admin.from("members").select("role, title").eq("user_id", creativeId).single();
+check("owner changes the role to Copywriter", toCopy.status === 200 && cw?.role === "creative" && cw?.title === "copywriter", JSON.stringify(cw));
 
 // New project with details
 const name = `R7 Cafe ${stamp}`;

@@ -1,5 +1,16 @@
 # Changelog
 
+## Team roles, lime WhatsApp buttons, aligned voice icon (2026-11-23)
+
+- **Dedicated team roles:** invite as Account manager, Project manager, Strategist, Social media
+  manager (manage clients: every project, both rooms) or Designer, Copywriter, Video editor,
+  Photographer, Developer, Intern (make the work: assigned projects, internal room only). Role
+  cards with icons replace the plain dropdown; members show a role badge; the owner can change a
+  teammate's role, and their room access follows.
+- **Share on WhatsApp** buttons are now the brand lime pill with a chat icon everywhere.
+- **Voice note button** in the chat toolbar now matches the other icons (same 30 px tile, size,
+  line weight) and is labelled "Voice note"; every toolbar icon gets a lime hover instead of blue.
+
 ## Premium finish, no blue left (2026-11-23)
 
 - **Every blue/teal is now the lime green:** the logo mark, app icons, favicon and share image

@@ -10,6 +10,7 @@ import { clientLimit } from "@/lib/plans";
 import { ArrowUpRight, FolderPlus, MessagesSquare, UserCheck, UserPlus } from "lucide-react";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { listTeam, projectIdsFor } from "@/lib/team/server";
+import { roleLabel } from "@/lib/team/rules";
 import { AddDemoButton } from "./add-demo-button";
 import { TimeSavedCard } from "@/components/time-saved-card";
 import { loadWorkspaceTimeSaved } from "@/lib/dashboard/time-saved-load";
@@ -44,7 +45,7 @@ async function Projects() {
     caller.membership.role === "creative" ? projectIdsFor(caller.userId) : Promise.resolve(null),
     canManageProjects(caller.membership.role) ? listTeam(ws.id) : Promise.resolve([]),
   ]);
-  const creatives = team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: m.name }));
+  const creatives = team.filter((m) => m.role === "creative").map((m) => ({ userId: m.userId, name: `${m.name} · ${roleLabel(m.role, m.title)}` }));
   // Creatives see only the projects they're on.
   const projects = mine ? allProjects.filter((p) => mine.has(p.id)) : allProjects;
   const archived = mine ? allArchived.filter((p) => mine.has(p.id)) : allArchived;

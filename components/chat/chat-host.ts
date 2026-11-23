@@ -1,6 +1,7 @@
 "use client";
 import { BOT_NAME, BOT_USER_ID, MSG } from "@/lib/nexconn/ids";
 import { BOT_AVATAR, personAvatar, ROOM_AVATAR } from "./avatars";
+import { limeHover, MIC_ICON, MIC_ICON_HOVER } from "./input-icons";
 import { CODE_KICKED, CODE_TOKEN_INVALID, createConnectionKeeper, STATUS, type LinkState } from "./connection";
 import { CHANGELIST_TAG, CONFLICT_TAG, defineChangeListElement, defineConflictElement } from "./feedback-cards";
 import { defineDriftElement, DRIFT_TAG } from "./drift-card";
@@ -8,11 +9,6 @@ import { APPROVAL_CHECK_TAG, defineApprovalCheckElement, defineScopeElement, SCO
 
 export const VOICE_MENU_ID = "drifty.voice";
 export const VOICE_EVENT = "drifty:voice";
-const MIC_ICON =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0b0c0e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>',
-  );
 import {
   CARD_TAG,
   clearLiveMetadata,
@@ -280,7 +276,13 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   // a mic button to its toolbar (custom InputMenu item, docs chatui-web/chat-ui/editor.md) and
   // record in our own sheet; the server posts the note as a real Nexconn RC:HQVCMsg.
   const menu = app.cloneInputMenu();
-  menu.items.push({ id: VOICE_MENU_ID, order: 5, icon: MIC_ICON, hoverIcon: MIC_ICON });
+  // Brand hover for the built-in buttons too (their default hover artwork is blue).
+  const lime = (items: typeof menu.items): typeof menu.items =>
+    items.map((it) => ({ ...it, hoverIcon: limeHover(it.icon), ...(it.submenu ? { submenu: lime(it.submenu) } : {}) }));
+  menu.items = lime(menu.items);
+  menu.items.push({ id: VOICE_MENU_ID, order: 5, icon: MIC_ICON, hoverIcon: MIC_ICON_HOVER });
+  // The toolbar labels an item by its id; give the mic a readable name (tooltip, screen readers).
+  app.registerLanguagePack("en_US", { [VOICE_MENU_ID]: "Voice note" });
   app.setInputMenu(menu);
   app.addEventListener(ChatUIEvents.INPUT_MENU_ITEM_CLICK, (evt: { data?: { id?: string; channelModel?: { channelIdentifier?: { channelId?: string } } } }) => {
     if (evt.data?.id !== VOICE_MENU_ID) return;
