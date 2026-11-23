@@ -282,7 +282,10 @@ async function boot(opts: ChatHostOptions): Promise<ChatHostHandle> {
   menu.items = lime(menu.items);
   menu.items.push({ id: VOICE_MENU_ID, order: 5, icon: MIC_ICON, hoverIcon: MIC_ICON_HOVER });
   // The toolbar labels an item by its id; give the mic a readable name (tooltip, screen readers).
-  app.registerLanguagePack("en_US", { [VOICE_MENU_ID]: "Voice note" });
+  // registerLanguagePack replaces the whole pack, so merge into ChatUI's own English entries;
+  // without them every built-in text shows its raw key (e.g. "time.format.today").
+  const english = app.cloneLanguageEntries("en_US");
+  if (english) app.registerLanguagePack("en_US", { ...english, [VOICE_MENU_ID]: "Voice note" });
   app.setInputMenu(menu);
   app.addEventListener(ChatUIEvents.INPUT_MENU_ITEM_CLICK, (evt: { data?: { id?: string; channelModel?: { channelIdentifier?: { channelId?: string } } } }) => {
     if (evt.data?.id !== VOICE_MENU_ID) return;
